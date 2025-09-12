@@ -1,0 +1,16 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="consul-mcp-server (dc1) " type="GoApplicationRunConfiguration" factoryName="Go Application">
+    <module name="consul-mcp-server" />
+    <working_directory value="$PROJECT_DIR$" />
+    <parameters value="http --transport-port 8080 --transport-host 0.0.0.0" />
+    <envs>
+      <env name="CONSUL_HTTP_ADDR" value="http://dc1.rahul-sharma.aws.sbx.hashicorpdemo.com:8500" />
+      <env name="CONSUL_HTTP_TOKEN" value="e95b599e-166e-7d80-08ad-aee76e7ddf19" />
+    </envs>
+    <kind value="PACKAGE" />
+    <package value="github.com/hashicorp/consul-mcp-server/cmd/consul-mcp-server" />
+    <directory value="$PROJECT_DIR$" />
+    <filePath value="$PROJECT_DIR$/cmd/consul-mcp-server/main.go" />
+    <method v="2" />
+  </configuration>
+</component>
