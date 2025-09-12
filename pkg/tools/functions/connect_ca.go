@@ -38,9 +38,9 @@ func GetConnectCARootsTool(logger *log.Logger) server.ServerTool {
 }
 
 func getConnectCARootsHandler(ctx context.Context, request mcp.CallToolRequest, logger *log.Logger) (*mcp.CallToolResult, error) {
-	pem, err := request.RequireString("pem")
-	if err != nil {
-		return nil, utils.LogAndReturnError(logger, "required input: pem is required", err)
+	pem := request.String("pem")
+	if pem == "" {
+		pem = "false"
 	}
 
 	// Get a simple http client to access the consul API
