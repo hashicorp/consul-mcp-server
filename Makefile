@@ -26,6 +26,7 @@ build:
 	CGO_ENABLED=0 GOARCH=$(ARCH) GOOS=$(OS) $(GO) build $(LDFLAGS) -o bin/$(BINARY_NAME) ./cmd/consul-mcp-server
 
 crt-build:
+	chmod +x $(CURDIR)/scripts/crt-build.sh
 	@mkdir -p $(TARGET_DIR)
 	@$(CURDIR)/scripts/crt-build.sh build
 	@cp $(CURDIR)/LICENSE $(TARGET_DIR)/LICENSE.txt
