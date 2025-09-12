@@ -4,15 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/hashicorp/consul-mcp-server/pkg/client"
-	"github.com/hashicorp/consul-mcp-server/pkg/utils"
-	"github.com/hashicorp/consul/api"
-	"github.com/mark3labs/mcp-go/mcp"
-	"github.com/mark3labs/mcp-go/server"
 	"net/url"
 	"strings"
 
+	"github.com/hashicorp/consul/api"
+	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/mark3labs/mcp-go/server"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/hashicorp/consul-mcp-server/pkg/client"
+	"github.com/hashicorp/consul-mcp-server/pkg/utils"
 )
 
 func GetIdentity(logger *log.Logger) server.ServerTool {
