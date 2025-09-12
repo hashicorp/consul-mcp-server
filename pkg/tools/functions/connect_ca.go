@@ -38,7 +38,7 @@ func GetConnectCARootsTool(logger *log.Logger) server.ServerTool {
 }
 
 func getConnectCARootsHandler(ctx context.Context, request mcp.CallToolRequest, logger *log.Logger) (*mcp.CallToolResult, error) {
-	pem := request.String("pem")
+	pem := request.GetString("pem", "false")
 	if pem == "" {
 		pem = "false"
 	}
