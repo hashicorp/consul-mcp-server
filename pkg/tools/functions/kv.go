@@ -230,10 +230,7 @@ func GetKVRecursiveTool(logger *log.Logger) server.ServerTool {
 }
 
 func getKVRecursiveHandler(ctx context.Context, request mcp.CallToolRequest, logger *log.Logger) (*mcp.CallToolResult, error) {
-	prefix, err := request.RequireString("prefix")
-	if err != nil {
-		return nil, utils.LogAndReturnError(logger, "required input: prefix is required", err)
-	}
+	prefix := request.GetString("prefix", "")
 
 	ap := request.GetString("admin_partition", "default")
 	ns := request.GetString("namespace", "default")
