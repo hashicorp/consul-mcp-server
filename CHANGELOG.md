@@ -1,3 +1,7 @@
+## 0.1.1 (Sep 24, 2025)
+FEATURES
+- Added support for CRT builds for build registries https://releases.hashicorp.com/consul-mcp-server and https://hub.docker.com/repository/docker/hashicorp/consul-mcp-server/general
+
 ## 0.1.0 (Sep 23, 2025)
 
 FEATURES
