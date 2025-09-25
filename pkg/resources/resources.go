@@ -17,8 +17,11 @@ import (
 	"strings"
 )
 
-// Anonymous access could cause rate limiting, so we point to the raw files in the main branch, hence caching the URL
-const ConsulGuideRawURL = "https://github.com/hashicorp/consul/blob/main/website/content/api-docs"
+// Anonymous access could cause rate limiting, so we point to the raw files in the main branch, hence caching the URLs
+var ConsulGuideRawURLs = []string{
+	"https://github.com/hashicorp/consul/blob/main/website/content/api-docs",
+	"https://github.com/hashicorp/consul/tree/main/website/content/docs",
+}
 
 var api_docs = map[string]ApiDoc{}
 
@@ -61,15 +64,17 @@ func RegisterResources(hcServer *server.MCPServer, logger *log.Logger) {
 	}
 
 	if len(api_docs) == 0 && readGithubResource() {
-		// not initialized yet, so fetch
-		fetchedDocs, err := fetchConsulAPIDocsFiles(ctx, ConsulGuideRawURL, httpClient)
-		if err != nil {
-			logger.Errorf("Failed to fetch Consul API docs from Consul: %v", err)
-			return
-		}
-		// Append to existing api_docs map rather than replacing
-		for key, value := range fetchedDocs {
-			api_docs[key] = value
+		// not initialized yet, so fetch from all URLs
+		for _, urlPath := range ConsulGuideRawURLs {
+			fetchedDocs, err := fetchConsulAPIDocsFiles(ctx, urlPath, httpClient)
+			if err != nil {
+				logger.Errorf("Failed to fetch Consul API docs from %s: %v", urlPath, err)
+				continue // Continue with next URL even if one fails
+			}
+			// Append to existing api_docs map rather than replacing
+			for key, value := range fetchedDocs {
+				api_docs[key] = value
+			}
 		}
 	}
 
@@ -144,12 +149,16 @@ func consulAPIDocResource(doc ApiDoc, logger *log.Logger) (mcp.Resource, server.
 			if err != nil {
 				return nil, utils.LogAndReturnError(logger, fmt.Sprintf("fetching %s markdown", doc.Name), err)
 			}
+			defer func() {
+				if closeErr := resp.Body.Close(); closeErr != nil {
+					logger.Warnf("Failed to close response body: %v", closeErr)
+				}
+			}()
+
 			if resp.StatusCode != http.StatusOK {
-				resp.Body.Close()
 				return nil, utils.LogAndReturnError(logger, fmt.Sprintf("fetching %s markdown, status not ok", doc.Name), fmt.Errorf("status: %s", resp.Status))
 			}
 			body, err := io.ReadAll(resp.Body)
-			resp.Body.Close()
 			if err != nil {
 				// Ignore this file and continue
 				return nil, utils.LogAndReturnError(logger, fmt.Sprintf("fetching %s markdown", doc.Name), err)
