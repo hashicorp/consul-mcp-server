@@ -53,12 +53,7 @@ func getOperatorUsageHandler(ctx context.Context, request mcp.CallToolRequest, l
 		queryParams.Set("dc", dc)
 	}
 
-	uri := (&url.URL{
-		Path:     "operator/usage",
-		RawQuery: queryParams.Encode(),
-	}).String()
-
-	usageResp, err := consulClient.Get(uri)
+	usageResp, err := consulClient.Get("operator/usage", queryParams)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, "fetching usage information from consul operator", err)
 	}

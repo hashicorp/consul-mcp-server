@@ -52,15 +52,12 @@ func getACLAuthMethodsHandler(ctx context.Context, request mcp.CallToolRequest, 
 		return mcp.NewToolResultError(fmt.Sprintf("failed to get http client for consul API: %v", err)), nil
 	}
 
-	uri := (&url.URL{
-		Path: "acl/auth-methods",
-		RawQuery: url.Values{
-			"partition": {ap},
-			"ns":        {ns},
-		}.Encode(),
-	}).String()
+	queryParams := url.Values{
+		"partition": {ap},
+		"ns":        {ns},
+	}
 
-	authMethodsResp, err := consulClient.Get(uri)
+	authMethodsResp, err := consulClient.Get("acl/auth-methods", queryParams)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, "fetching ACL auth methods list from consul", err)
 	}
@@ -114,15 +111,12 @@ func getACLAuthMethodHandler(ctx context.Context, request mcp.CallToolRequest, l
 		return mcp.NewToolResultError(fmt.Sprintf("failed to get http client for consul API: %v", err)), nil
 	}
 
-	uri := (&url.URL{
-		Path: fmt.Sprintf("acl/auth-method/%s", authMethodName),
-		RawQuery: url.Values{
-			"partition": {ap},
-			"ns":        {ns},
-		}.Encode(),
-	}).String()
+	queryParams := url.Values{
+		"partition": {ap},
+		"ns":        {ns},
+	}
 
-	authMethodResp, err := consulClient.Get(uri)
+	authMethodResp, err := consulClient.Get(fmt.Sprintf("acl/auth-method/%s", authMethodName), queryParams)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, fmt.Sprintf("fetching ACL auth method '%s' details from consul", authMethodName), err)
 	}

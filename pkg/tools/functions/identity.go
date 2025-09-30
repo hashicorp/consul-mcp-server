@@ -52,12 +52,7 @@ func getIdentityHandler(ctx context.Context, request mcp.CallToolRequest, logger
 		queryParams.Set("pem", "true")
 	}
 
-	uri := (&url.URL{
-		Path:     "connect/ca/roots",
-		RawQuery: queryParams.Encode(),
-	}).String()
-
-	rootsResp, err := consulClient.Get(uri)
+	rootsResp, err := consulClient.Get("connect/ca/roots", queryParams)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, "fetching Connect CA roots from consul", err)
 	}

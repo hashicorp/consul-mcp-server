@@ -53,14 +53,9 @@ func getOperatorSegmentHandler(ctx context.Context, request mcp.CallToolRequest,
 		queryParams.Set("dc", dc)
 	}
 
-	uri := (&url.URL{
-		Path:     "operator/segment",
-		RawQuery: queryParams.Encode(),
-	}).String()
-
-	segmentResp, err := consulClient.Get(uri)
+	segmentResp, err := consulClient.Get("operator/segment", queryParams)
 	if err != nil {
-		return nil, utils.LogAndReturnError(logger, "fetching segment information from consul operator", err)
+		return nil, utils.LogAndReturnError(logger, "fetching operator segment information from consul", err)
 	}
 
 	// convert segmentResp i.e. bytes[] to text

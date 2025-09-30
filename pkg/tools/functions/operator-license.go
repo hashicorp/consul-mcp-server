@@ -53,12 +53,7 @@ func getOperatorLicenseHandler(ctx context.Context, request mcp.CallToolRequest,
 		queryParams.Set("dc", dc)
 	}
 
-	uri := (&url.URL{
-		Path:     "operator/license",
-		RawQuery: queryParams.Encode(),
-	}).String()
-
-	licenseResp, err := consulClient.Get(uri)
+	licenseResp, err := consulClient.Get("operator/license", queryParams)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, "fetching license information from consul operator", err)
 	}

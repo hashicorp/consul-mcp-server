@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/consul/api"
 	log "github.com/sirupsen/logrus"
 	"net/url"
+	"strings"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
@@ -32,6 +33,21 @@ func GetACLTokensTool(logger *log.Logger) server.ServerTool {
 			mcp.Description("The consul namespace to query."),
 			mcp.DefaultString("default"),
 		),
+		mcp.WithString("policy",
+			mcp.Description("Filter results to only tokens that have the specified policy ID."),
+		),
+		mcp.WithString("role",
+			mcp.Description("Filter results to only tokens that have the specified role ID."),
+		),
+		mcp.WithString("authmethod",
+			mcp.Description("Filter results to only tokens that were created by the specified auth method."),
+		),
+		mcp.WithString("authmethod-ns",
+			mcp.Description("The namespace of the auth method to filter by."),
+		),
+		mcp.WithString("filter",
+			mcp.Description("Specifies the expression used to filter the queries results prior to returning the data."),
+		),
 	)
 	return server.ServerTool{
 		Tool: tool,
@@ -45,6 +61,14 @@ func getACLTokensHandler(ctx context.Context, request mcp.CallToolRequest, logge
 	ap := request.GetString("admin_partition", "default")
 	ns := request.GetString("namespace", "default")
 
+	// Get optional parameters
+	dc := request.GetString("dc", "")
+	policy := request.GetString("policy", "")
+	role := request.GetString("role", "")
+	authMethod := request.GetString("authmethod", "")
+	authMethodNs := request.GetString("authmethod-ns", "")
+	filter := request.GetString("filter", "")
+
 	// Get a simple http client to access the consul API
 	consulClient, err := client.GetGetConsulHttpClientFromContext(ctx, logger)
 	if err != nil {
@@ -52,39 +76,38 @@ func getACLTokensHandler(ctx context.Context, request mcp.CallToolRequest, logge
 		return mcp.NewToolResultError(fmt.Sprintf("failed to get http client for consul API: %v", err)), nil
 	}
 
-	uri := (&url.URL{
-		Path: "acl/tokens",
-		RawQuery: url.Values{
-			"partition": {ap},
-			"ns":        {ns},
-		}.Encode(),
-	}).String()
+	queryParams := url.Values{
+		"partition": {ap},
+		"ns":        {ns},
+	}
 
-	tokensResp, err := consulClient.Get(uri)
+	if dc != "" {
+		queryParams.Set("dc", dc)
+	}
+	if policy != "" {
+		queryParams.Set("policy", policy)
+	}
+	if role != "" {
+		queryParams.Set("role", role)
+	}
+	if authMethod != "" {
+		queryParams.Set("authmethod", authMethod)
+	}
+	if authMethodNs != "" {
+		queryParams.Set("authmethod-ns", authMethodNs)
+	}
+	if filter != "" {
+		queryParams.Set("filter", filter)
+	}
+
+	tokensResp, err := consulClient.Get("acl/tokens", queryParams)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, "fetching ACL tokens list from consul", err)
 	}
 
-	// Parse the JSON response using official Consul SDK types
-	var tokens []*api.ACLTokenListEntry
-	if err := json.Unmarshal(tokensResp, &tokens); err != nil {
-		return nil, utils.LogAndReturnError(logger, "parsing ACL tokens response", err)
-	}
-
-	// Redact SecretID fields
-	for i := range tokens {
-		if tokens[i].SecretID != "" && tokens[i].SecretID != "anonymous" {
-			tokens[i].SecretID = "[REDACTED]"
-		}
-	}
-
-	// Marshal back to JSON
-	redactedJson, err := json.MarshalIndent(tokens, "", "  ")
-	if err != nil {
-		return nil, utils.LogAndReturnError(logger, "marshaling redacted ACL tokens", err)
-	}
-
-	return mcp.NewToolResultText(string(redactedJson)), nil
+	// convert tokensResp i.e. bytes[] to text
+	tokensJson := strings.TrimSpace(string(tokensResp))
+	return mcp.NewToolResultText(tokensJson), nil
 }
 
 func GetACLTokenTool(logger *log.Logger) server.ServerTool {
@@ -131,37 +154,19 @@ func getACLTokenHandler(ctx context.Context, request mcp.CallToolRequest, logger
 		return mcp.NewToolResultError(fmt.Sprintf("failed to get http client for consul API: %v", err)), nil
 	}
 
-	uri := (&url.URL{
-		Path: fmt.Sprintf("acl/token/%s", tokenId),
-		RawQuery: url.Values{
-			"partition": {ap},
-			"ns":        {ns},
-		}.Encode(),
-	}).String()
+	queryParams := url.Values{
+		"partition": {ap},
+		"ns":        {ns},
+	}
 
-	tokenResp, err := consulClient.Get(uri)
+	tokenResp, err := consulClient.Get(fmt.Sprintf("acl/token/%s", tokenId), queryParams)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, fmt.Sprintf("fetching ACL token '%s' details from consul", tokenId), err)
 	}
 
-	// Parse the JSON response using official Consul SDK types
-	var token *api.ACLToken
-	if err := json.Unmarshal(tokenResp, &token); err != nil {
-		return nil, utils.LogAndReturnError(logger, "parsing ACL token response", err)
-	}
-
-	// Redact SecretID field
-	if token.SecretID != "" && token.SecretID != "anonymous" {
-		token.SecretID = "[REDACTED]"
-	}
-
-	// Marshal back to JSON
-	redactedJson, err := json.MarshalIndent(token, "", "  ")
-	if err != nil {
-		return nil, utils.LogAndReturnError(logger, "marshaling redacted ACL token", err)
-	}
-
-	return mcp.NewToolResultText(string(redactedJson)), nil
+	// convert tokenResp i.e. bytes[] to text
+	tokenJson := strings.TrimSpace(string(tokenResp))
+	return mcp.NewToolResultText(tokenJson), nil
 }
 
 func GetACLTokenSelfTool(logger *log.Logger) server.ServerTool {
@@ -190,7 +195,7 @@ func getACLTokenSelfHandler(ctx context.Context, _ mcp.CallToolRequest, logger *
 
 	uri := "acl/token/self"
 
-	tokenResp, err := consulClient.Get(uri)
+	tokenResp, err := consulClient.Get(uri, nil)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, "fetching current ACL token details from consul", err)
 	}

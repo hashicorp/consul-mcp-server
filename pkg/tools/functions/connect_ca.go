@@ -39,9 +39,6 @@ func GetConnectCARootsTool(logger *log.Logger) server.ServerTool {
 
 func getConnectCARootsHandler(ctx context.Context, request mcp.CallToolRequest, logger *log.Logger) (*mcp.CallToolResult, error) {
 	pem := request.GetString("pem", "false")
-	if pem == "" {
-		pem = "false"
-	}
 
 	// Get a simple http client to access the consul API
 	consulClient, err := client.GetGetConsulHttpClientFromContext(ctx, logger)
@@ -56,19 +53,14 @@ func getConnectCARootsHandler(ctx context.Context, request mcp.CallToolRequest, 
 		queryParams.Set("pem", "true")
 	}
 
-	uri := (&url.URL{
-		Path:     "connect/ca/roots",
-		RawQuery: queryParams.Encode(),
-	}).String()
-
-	rootsResp, err := consulClient.Get(uri)
+	rootsResp, err := consulClient.Get("connect/ca/roots", queryParams)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, "fetching Connect CA roots from consul", err)
 	}
 
 	// convert rootsResp i.e. bytes[] to text
-	rootsText := strings.TrimSpace(string(rootsResp))
-	return mcp.NewToolResultText(rootsText), nil
+	rootsJson := strings.TrimSpace(string(rootsResp))
+	return mcp.NewToolResultText(rootsJson), nil
 }
 
 func GetConnectCAConfigurationTool(logger *log.Logger) server.ServerTool {
@@ -95,9 +87,7 @@ func getConnectCAConfigurationHandler(ctx context.Context, _ mcp.CallToolRequest
 		return mcp.NewToolResultError(fmt.Sprintf("failed to get http client for consul API: %v", err)), nil
 	}
 
-	uri := "connect/ca/configuration"
-
-	configResp, err := consulClient.Get(uri)
+	configResp, err := consulClient.Get("connect/ca/configuration", nil)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, "fetching Connect CA configuration from consul", err)
 	}

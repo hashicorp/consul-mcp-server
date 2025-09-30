@@ -52,15 +52,12 @@ func getCatalogServicesHandler(ctx context.Context, request mcp.CallToolRequest,
 		return mcp.NewToolResultError(fmt.Sprintf("failed to get http client for consul API: %v", err)), nil
 	}
 
-	uri := (&url.URL{
-		Path: "catalog/services",
-		RawQuery: url.Values{
-			"partition": {ap},
-			"ns":        {ns},
-		}.Encode(),
-	}).String()
+	queryParams := url.Values{
+		"partition": {ap},
+		"ns":        {ns},
+	}
 
-	serviceResp, err := consulClient.Get(uri)
+	serviceResp, err := consulClient.Get("catalog/services", queryParams)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, "fetching service list from consul catalog", err)
 	}
@@ -104,15 +101,13 @@ func getCatalogNodesHandler(ctx context.Context, request mcp.CallToolRequest, lo
 		logger.WithError(err).Error("failed to get http client for consul API")
 		return mcp.NewToolResultError(fmt.Sprintf("failed to get http client for consul API: %v", err)), nil
 	}
-	uri := (&url.URL{
-		Path: "catalog/nodes",
-		RawQuery: url.Values{
-			"partition": {ap},
-			"ns":        {ns},
-		}.Encode(),
-	}).String()
 
-	nodeResp, err := consulClient.Get(uri)
+	queryParams := url.Values{
+		"partition": {ap},
+		"ns":        {ns},
+	}
+
+	nodeResp, err := consulClient.Get("catalog/nodes", queryParams)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, "fetching node list from consul catalog", err)
 	}
@@ -196,12 +191,7 @@ func getCatalogServiceHandler(ctx context.Context, request mcp.CallToolRequest, 
 		queryParams.Set("near", near)
 	}
 
-	uri := (&url.URL{
-		Path:     fmt.Sprintf("catalog/service/%s", serviceName),
-		RawQuery: queryParams.Encode(),
-	}).String()
-
-	serviceResp, err := consulClient.Get(uri)
+	serviceResp, err := consulClient.Get(fmt.Sprintf("catalog/service/%s", serviceName), queryParams)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, fmt.Sprintf("fetching nodes for service '%s' from consul catalog", serviceName), err)
 	}
@@ -254,15 +244,13 @@ func getCatalogConnectHandler(ctx context.Context, request mcp.CallToolRequest, 
 		logger.WithError(err).Error("failed to get http client for consul API")
 		return mcp.NewToolResultError(fmt.Sprintf("failed to get http client for consul API: %v", err)), nil
 	}
-	uri := (&url.URL{
-		Path: fmt.Sprintf("catalog/connect/%s", serviceName),
-		RawQuery: url.Values{
-			"partition": {ap},
-			"ns":        {ns},
-		}.Encode(),
-	}).String()
 
-	connectResp, err := consulClient.Get(uri)
+	queryParams := url.Values{
+		"partition": {ap},
+		"ns":        {ns},
+	}
+
+	connectResp, err := consulClient.Get(fmt.Sprintf("catalog/connect/%s", serviceName), queryParams)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, fmt.Sprintf("fetching mesh-capable service '%s' nodes from consul catalog", serviceName), err)
 	}
@@ -332,12 +320,7 @@ func getCatalogNodeHandler(ctx context.Context, request mcp.CallToolRequest, log
 		queryParams.Set("dc", dc)
 	}
 
-	uri := (&url.URL{
-		Path:     fmt.Sprintf("catalog/node/%s", nodeName),
-		RawQuery: queryParams.Encode(),
-	}).String()
-
-	nodeResp, err := consulClient.Get(uri)
+	nodeResp, err := consulClient.Get(fmt.Sprintf("catalog/node/%s", nodeName), queryParams)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, fmt.Sprintf("fetching services for node '%s' from consul catalog", nodeName), err)
 	}
@@ -371,9 +354,7 @@ func getCatalogDatacentersHandler(ctx context.Context, _ mcp.CallToolRequest, lo
 		return mcp.NewToolResultError(fmt.Sprintf("failed to get http client for consul API: %v", err)), nil
 	}
 
-	uri := "catalog/datacenters"
-
-	dcResp, err := consulClient.Get(uri)
+	dcResp, err := consulClient.Get("catalog/datacenters", nil)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, "fetching datacenters list from consul catalog", err)
 	}
@@ -443,12 +424,7 @@ func getCatalogGatewayServicesHandler(ctx context.Context, request mcp.CallToolR
 		queryParams.Set("dc", dc)
 	}
 
-	uri := (&url.URL{
-		Path:     fmt.Sprintf("catalog/gateway-services/%s", gatewayName),
-		RawQuery: queryParams.Encode(),
-	}).String()
-
-	gatewayResp, err := consulClient.Get(uri)
+	gatewayResp, err := consulClient.Get(fmt.Sprintf("catalog/gateway-services/%s", gatewayName), queryParams)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, fmt.Sprintf("fetching services for gateway '%s' from consul catalog", gatewayName), err)
 	}

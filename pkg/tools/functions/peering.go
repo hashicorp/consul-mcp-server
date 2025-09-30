@@ -46,14 +46,10 @@ func getPeeringsHandler(ctx context.Context, request mcp.CallToolRequest, logger
 		return mcp.NewToolResultError(fmt.Sprintf("failed to get http client for consul API: %v", err)), nil
 	}
 
-	uri := (&url.URL{
-		Path: "peerings",
-		RawQuery: url.Values{
-			"partition": {ap},
-		}.Encode(),
-	}).String()
-
-	peeringResp, err := consulClient.Get(uri)
+	queryParams := url.Values{
+		"partition": {ap},
+	}
+	peeringResp, err := consulClient.Get("peerings", queryParams)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, "fetching peerings list from consul", err)
 	}
@@ -102,14 +98,10 @@ func getPeeringHandler(ctx context.Context, request mcp.CallToolRequest, logger 
 		return mcp.NewToolResultError(fmt.Sprintf("failed to get http client for consul API: %v", err)), nil
 	}
 
-	uri := (&url.URL{
-		Path: fmt.Sprintf("peering/%s", peeringName),
-		RawQuery: url.Values{
-			"partition": {ap},
-		}.Encode(),
-	}).String()
-
-	peeringResp, err := consulClient.Get(uri)
+	queryParams := url.Values{
+		"partition": {ap},
+	}
+	peeringResp, err := consulClient.Get(fmt.Sprintf("peering/%s", peeringName), queryParams)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, fmt.Sprintf("fetching peering '%s' details from consul", peeringName), err)
 	}
@@ -158,14 +150,10 @@ func getPeeringExportedServicesHandler(ctx context.Context, request mcp.CallTool
 		return mcp.NewToolResultError(fmt.Sprintf("failed to get http client for consul API: %v", err)), nil
 	}
 
-	uri := (&url.URL{
-		Path: fmt.Sprintf("peering/%s/exported-services", peeringName),
-		RawQuery: url.Values{
-			"partition": {ap},
-		}.Encode(),
-	}).String()
-
-	exportedResp, err := consulClient.Get(uri)
+	queryParams := url.Values{
+		"partition": {ap},
+	}
+	exportedResp, err := consulClient.Get(fmt.Sprintf("peering/%s/exported-services", peeringName), queryParams)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, fmt.Sprintf("fetching exported services for peering '%s' from consul", peeringName), err)
 	}

@@ -24,6 +24,13 @@ func createHTTPClient(insecureSkipVerify bool, logger *log.Logger) *http.Client 
 	}
 	transport.Proxy = http.ProxyFromEnvironment
 
+	// Log TLS configuration for debugging
+	if insecureSkipVerify {
+		logger.Warn("TLS certificate verification is disabled - this should only be used in development environments")
+	} else {
+		logger.Debug("TLS certificate verification is enabled")
+	}
+
 	retryClient.HTTPClient = cleanhttp.DefaultClient()
 	retryClient.HTTPClient.Timeout = 10 * time.Second
 	retryClient.HTTPClient.Transport = transport

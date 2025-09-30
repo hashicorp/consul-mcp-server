@@ -40,15 +40,13 @@ func getAgentConnectCAHandler(ctx context.Context, _ mcp.CallToolRequest, logger
 		return mcp.NewToolResultError(fmt.Sprintf("failed to get http client for consul API: %v", err)), nil
 	}
 
-	uri := "agent/connect/ca"
-
-	caResp, err := consulClient.Get(uri)
+	caResp, err := consulClient.Get("agent/connect/ca/roots", nil)
 	if err != nil {
-		return nil, utils.LogAndReturnError(logger, "fetching Connect CA certificate bundle", err)
+		return nil, utils.LogAndReturnError(logger, "fetching Connect CA roots from agent", err)
 	}
 
-	caOutput := strings.TrimSpace(string(caResp))
-	return mcp.NewToolResultText(caOutput), nil
+	caJson := strings.TrimSpace(string(caResp))
+	return mcp.NewToolResultText(caJson), nil
 }
 
 func GetAgentConnectAuthorizeTool(logger *log.Logger) server.ServerTool {
@@ -84,11 +82,7 @@ func getAgentConnectAuthorizeHandler(ctx context.Context, request mcp.CallToolRe
 		return nil, utils.LogAndReturnError(logger, "required input: target is required", err)
 	}
 
-	clientCertURI, err := request.RequireString("client_cert_uri")
-	if err != nil {
-		return nil, utils.LogAndReturnError(logger, "required input: client_cert_uri is required", err)
-	}
-
+	clientCertURI := request.GetString("client_cert_uri", "")
 	clientCertSerial := request.GetString("client_cert_serial", "")
 
 	consulClient, err := client.GetGetConsulHttpClientFromContext(ctx, logger)
@@ -98,22 +92,18 @@ func getAgentConnectAuthorizeHandler(ctx context.Context, request mcp.CallToolRe
 	}
 
 	queryParams := url.Values{
-		"target":          {target},
-		"client_cert_uri": {clientCertURI},
+		"target": {target},
 	}
-
+	if clientCertURI != "" {
+		queryParams.Set("client_cert_uri", clientCertURI)
+	}
 	if clientCertSerial != "" {
 		queryParams.Set("client_cert_serial", clientCertSerial)
 	}
 
-	uri := (&url.URL{
-		Path:     "agent/connect/authorize",
-		RawQuery: queryParams.Encode(),
-	}).String()
-
-	authResp, err := consulClient.Get(uri)
+	authResp, err := consulClient.Get("agent/connect/authorize", queryParams)
 	if err != nil {
-		return nil, utils.LogAndReturnError(logger, "checking Connect authorization", err)
+		return nil, utils.LogAndReturnError(logger, "fetching Connect authorization from agent", err)
 	}
 
 	authJson := strings.TrimSpace(string(authResp))
@@ -152,11 +142,9 @@ func getAgentConnectProxyConfigHandler(ctx context.Context, request mcp.CallTool
 		return mcp.NewToolResultError(fmt.Sprintf("failed to get http client for consul API: %v", err)), nil
 	}
 
-	uri := fmt.Sprintf("agent/connect/proxy/%s", proxyServiceID)
-
-	proxyResp, err := consulClient.Get(uri)
+	proxyResp, err := consulClient.Get(fmt.Sprintf("agent/connect/proxy/%s", proxyServiceID), nil)
 	if err != nil {
-		return nil, utils.LogAndReturnError(logger, fmt.Sprintf("fetching Connect proxy configuration for '%s'", proxyServiceID), err)
+		return nil, utils.LogAndReturnError(logger, fmt.Sprintf("fetching Connect proxy config for service '%s' from agent", proxyServiceID), err)
 	}
 
 	proxyJson := strings.TrimSpace(string(proxyResp))
@@ -199,14 +187,9 @@ func getAgentConnectLeafCertHandler(ctx context.Context, request mcp.CallToolReq
 		"service": {service},
 	}
 
-	uri := (&url.URL{
-		Path:     "agent/connect/leaf",
-		RawQuery: queryParams.Encode(),
-	}).String()
-
-	leafResp, err := consulClient.Get(uri)
+	leafResp, err := consulClient.Get("agent/connect/ca/leaf", queryParams)
 	if err != nil {
-		return nil, utils.LogAndReturnError(logger, fmt.Sprintf("fetching Connect leaf certificate for service '%s'", service), err)
+		return nil, utils.LogAndReturnError(logger, fmt.Sprintf("fetching Connect leaf certificate for service '%s' from agent", service), err)
 	}
 
 	leafJson := strings.TrimSpace(string(leafResp))

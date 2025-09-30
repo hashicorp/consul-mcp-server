@@ -92,12 +92,7 @@ func getKVHandler(ctx context.Context, request mcp.CallToolRequest, logger *log.
 		queryParams.Set("separator", separator)
 	}
 
-	uri := (&url.URL{
-		Path:     fmt.Sprintf("kv/%s", key),
-		RawQuery: queryParams.Encode(),
-	}).String()
-
-	kvResp, err := consulClient.Get(uri)
+	kvResp, err := consulClient.Get(fmt.Sprintf("kv/%s", key), queryParams)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, fmt.Sprintf("fetching key '%s' from consul KV store", key), err)
 	}
@@ -145,8 +140,6 @@ func GetKVKeysTool(logger *log.Logger) server.ServerTool {
 func getKVKeysHandler(ctx context.Context, request mcp.CallToolRequest, logger *log.Logger) (*mcp.CallToolResult, error) {
 	prefix := request.GetString("prefix", "")
 
-
-
 	ap := request.GetString("admin_partition", "default")
 	ns := request.GetString("namespace", "default")
 
@@ -175,20 +168,13 @@ func getKVKeysHandler(ctx context.Context, request mcp.CallToolRequest, logger *
 		queryParams.Set("separator", separator)
 	}
 
-	var uri string
+	var path string
 	if prefix == "" {
-		uri = (&url.URL{
-			Path:     "kv/",
-			RawQuery: queryParams.Encode(),
-		}).String()
+		path = "kv/"
 	} else {
-		uri = (&url.URL{
-			Path:     fmt.Sprintf("kv/%s", prefix),
-			RawQuery: queryParams.Encode(),
-		}).String()
+		path = fmt.Sprintf("kv/%s", prefix)
 	}
-
-	keysResp, err := consulClient.Get(uri)
+	keysResp, err := consulClient.Get(path, queryParams)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, fmt.Sprintf("fetching keys with prefix '%s' from consul KV store", prefix), err)
 	}
@@ -256,20 +242,14 @@ func getKVRecursiveHandler(ctx context.Context, request mcp.CallToolRequest, log
 		queryParams.Set("dc", dc)
 	}
 
-	var uri string
+	var path string
 	if prefix == "" {
-		uri = (&url.URL{
-			Path:     "kv/",
-			RawQuery: queryParams.Encode(),
-		}).String()
+		path = "kv/"
 	} else {
-		uri = (&url.URL{
-			Path:     fmt.Sprintf("kv/%s", prefix),
-			RawQuery: queryParams.Encode(),
-		}).String()
+		path = fmt.Sprintf("kv/%s", prefix)
 	}
 
-	recursiveResp, err := consulClient.Get(uri)
+	recursiveResp, err := consulClient.Get(path, queryParams)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, fmt.Sprintf("fetching keys recursively with prefix '%s' from consul KV store", prefix), err)
 	}

@@ -53,12 +53,7 @@ func getQueryHandler(ctx context.Context, request mcp.CallToolRequest, logger *l
 		queryParams.Set("dc", dc)
 	}
 
-	uri := (&url.URL{
-		Path:     "query",
-		RawQuery: queryParams.Encode(),
-	}).String()
-
-	queryResp, err := consulClient.Get(uri)
+	queryResp, err := consulClient.Get("query", queryParams)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, "fetching prepared queries from consul", err)
 	}
@@ -113,12 +108,7 @@ func getQueryByIdHandler(ctx context.Context, request mcp.CallToolRequest, logge
 		queryParams.Set("dc", dc)
 	}
 
-	uri := (&url.URL{
-		Path:     fmt.Sprintf("query/%s", queryId),
-		RawQuery: queryParams.Encode(),
-	}).String()
-
-	queryResp, err := consulClient.Get(uri)
+	queryResp, err := consulClient.Get(fmt.Sprintf("query/%s", queryId), queryParams)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, fmt.Sprintf("fetching prepared query '%s' from consul", queryId), err)
 	}
@@ -187,12 +177,7 @@ func getQueryExecuteHandler(ctx context.Context, request mcp.CallToolRequest, lo
 		queryParams.Set("limit", limit)
 	}
 
-	uri := (&url.URL{
-		Path:     fmt.Sprintf("query/%s/execute", queryIdOrName),
-		RawQuery: queryParams.Encode(),
-	}).String()
-
-	executeResp, err := consulClient.Get(uri)
+	executeResp, err := consulClient.Get(fmt.Sprintf("query/%s/execute", queryIdOrName), queryParams)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, fmt.Sprintf("executing prepared query '%s' from consul", queryIdOrName), err)
 	}
@@ -247,12 +232,7 @@ func getQueryExplainHandler(ctx context.Context, request mcp.CallToolRequest, lo
 		queryParams.Set("dc", dc)
 	}
 
-	uri := (&url.URL{
-		Path:     fmt.Sprintf("query/%s/explain", queryIdOrName),
-		RawQuery: queryParams.Encode(),
-	}).String()
-
-	explainResp, err := consulClient.Get(uri)
+	explainResp, err := consulClient.Get(fmt.Sprintf("query/%s/explain", queryIdOrName), queryParams)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, fmt.Sprintf("explaining prepared query '%s' from consul", queryIdOrName), err)
 	}

@@ -47,14 +47,11 @@ func getNamespacesHandler(ctx context.Context, request mcp.CallToolRequest, logg
 		return mcp.NewToolResultError(fmt.Sprintf("failed to get http client for consul API: %v", err)), nil
 	}
 
-	uri := (&url.URL{
-		Path: "namespaces",
-		RawQuery: url.Values{
-			"partition": {ap},
-		}.Encode(),
-	}).String()
+	queryParams := url.Values{
+		"partition": {ap},
+	}
 
-	namespacesResp, err := consulClient.Get(uri)
+	namespacesResp, err := consulClient.Get("namespaces", queryParams)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, "fetching namespaces list from consul", err)
 	}
@@ -103,14 +100,11 @@ func getNamespaceHandler(ctx context.Context, request mcp.CallToolRequest, logge
 		return mcp.NewToolResultError(fmt.Sprintf("failed to get http client for consul API: %v", err)), nil
 	}
 
-	uri := (&url.URL{
-		Path: fmt.Sprintf("namespace/%s", namespaceName),
-		RawQuery: url.Values{
-			"partition": {ap},
-		}.Encode(),
-	}).String()
+	queryParams := url.Values{
+		"partition": {ap},
+	}
 
-	namespaceResp, err := consulClient.Get(uri)
+	namespaceResp, err := consulClient.Get(fmt.Sprintf("namespace/%s", namespaceName), queryParams)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, fmt.Sprintf("fetching namespace '%s' details from consul", namespaceName), err)
 	}

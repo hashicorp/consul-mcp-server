@@ -53,12 +53,7 @@ func getOperatorKeyringHandler(ctx context.Context, request mcp.CallToolRequest,
 		queryParams.Set("relay-factor", relayFactor)
 	}
 
-	uri := (&url.URL{
-		Path:     "operator/keyring",
-		RawQuery: queryParams.Encode(),
-	}).String()
-
-	keyringResp, err := consulClient.Get(uri)
+	keyringResp, err := consulClient.Get("operator/keyring", queryParams)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, "fetching keyring information from consul operator", err)
 	}

@@ -49,7 +49,7 @@ func GetSessionTool(logger *log.Logger) server.ServerTool {
 }
 
 func getSessionHandler(ctx context.Context, request mcp.CallToolRequest, logger *log.Logger) (*mcp.CallToolResult, error) {
-	sessionId, err := request.RequireString("session_id")
+	sessionID, err := request.RequireString("session_id")
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, "required input: session_id is required", err)
 	}
@@ -72,18 +72,14 @@ func getSessionHandler(ctx context.Context, request mcp.CallToolRequest, logger 
 		"partition": {ap},
 		"ns":        {ns},
 	}
+
 	if dc != "" {
 		queryParams.Set("dc", dc)
 	}
 
-	uri := (&url.URL{
-		Path:     fmt.Sprintf("session/info/%s", sessionId),
-		RawQuery: queryParams.Encode(),
-	}).String()
-
-	sessionResp, err := consulClient.Get(uri)
+	sessionResp, err := consulClient.Get(fmt.Sprintf("session/info/%s", sessionID), queryParams)
 	if err != nil {
-		return nil, utils.LogAndReturnError(logger, fmt.Sprintf("fetching session '%s' details from consul", sessionId), err)
+		return nil, utils.LogAndReturnError(logger, fmt.Sprintf("fetching session '%s' details from consul", sessionID), err)
 	}
 
 	// convert sessionResp i.e. bytes[] to text
@@ -123,9 +119,9 @@ func GetSessionNodeTool(logger *log.Logger) server.ServerTool {
 }
 
 func getSessionNodeHandler(ctx context.Context, request mcp.CallToolRequest, logger *log.Logger) (*mcp.CallToolResult, error) {
-	nodeName, err := request.RequireString("node_name")
+	node, err := request.RequireString("node")
 	if err != nil {
-		return nil, utils.LogAndReturnError(logger, "required input: node_name is required", err)
+		return nil, utils.LogAndReturnError(logger, "required input: node is required", err)
 	}
 
 	ap := request.GetString("admin_partition", "default")
@@ -146,18 +142,14 @@ func getSessionNodeHandler(ctx context.Context, request mcp.CallToolRequest, log
 		"partition": {ap},
 		"ns":        {ns},
 	}
+
 	if dc != "" {
 		queryParams.Set("dc", dc)
 	}
 
-	uri := (&url.URL{
-		Path:     fmt.Sprintf("session/node/%s", nodeName),
-		RawQuery: queryParams.Encode(),
-	}).String()
-
-	nodeSessionsResp, err := consulClient.Get(uri)
+	nodeSessionsResp, err := consulClient.Get(fmt.Sprintf("session/node/%s", node), queryParams)
 	if err != nil {
-		return nil, utils.LogAndReturnError(logger, fmt.Sprintf("fetching sessions for node '%s' from consul", nodeName), err)
+		return nil, utils.LogAndReturnError(logger, fmt.Sprintf("fetching sessions for node '%s' from consul", node), err)
 	}
 
 	// convert nodeSessionsResp i.e. bytes[] to text
@@ -211,16 +203,12 @@ func getSessionListHandler(ctx context.Context, request mcp.CallToolRequest, log
 		"partition": {ap},
 		"ns":        {ns},
 	}
+
 	if dc != "" {
 		queryParams.Set("dc", dc)
 	}
 
-	uri := (&url.URL{
-		Path:     "session/list",
-		RawQuery: queryParams.Encode(),
-	}).String()
-
-	sessionsResp, err := consulClient.Get(uri)
+	sessionsResp, err := consulClient.Get("session/list", queryParams)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, "fetching sessions list from consul", err)
 	}

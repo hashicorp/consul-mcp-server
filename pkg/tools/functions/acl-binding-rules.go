@@ -68,12 +68,7 @@ func getACLBindingRulesHandler(ctx context.Context, request mcp.CallToolRequest,
 		queryParams.Set("authmethod", authMethod)
 	}
 
-	uri := (&url.URL{
-		Path:     "acl/binding-rules",
-		RawQuery: queryParams.Encode(),
-	}).String()
-
-	bindingRulesResp, err := consulClient.Get(uri)
+	bindingRulesResp, err := consulClient.Get("acl/binding-rules", queryParams)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, "fetching ACL binding rules list from consul", err)
 	}
@@ -127,15 +122,13 @@ func getACLBindingRuleHandler(ctx context.Context, request mcp.CallToolRequest, 
 		return mcp.NewToolResultError(fmt.Sprintf("failed to get http client for consul API: %v", err)), nil
 	}
 
-	uri := (&url.URL{
-		Path: fmt.Sprintf("acl/binding-rule/%s", bindingRuleId),
-		RawQuery: url.Values{
-			"partition": {ap},
-			"ns":        {ns},
-		}.Encode(),
-	}).String()
+	// Build query parameters
+	queryParams := url.Values{
+		"partition": {ap},
+		"ns":        {ns},
+	}
 
-	bindingRuleResp, err := consulClient.Get(uri)
+	bindingRuleResp, err := consulClient.Get(fmt.Sprintf("acl/binding-rule/%s", bindingRuleId), queryParams)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, fmt.Sprintf("fetching ACL binding rule '%s' details from consul", bindingRuleId), err)
 	}

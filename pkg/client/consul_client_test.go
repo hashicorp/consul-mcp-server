@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"testing"
 
@@ -130,7 +131,7 @@ func TestConsulClientHTTPMethods(t *testing.T) {
 	}
 
 	t.Run("GET request", func(t *testing.T) {
-		resp, err := client.Get("test/endpoint")
+		resp, err := client.Get("test/endpoint", url.Values{})
 		require.NoError(t, err)
 
 		var result map[string]interface{}
@@ -207,7 +208,7 @@ func TestConsulClientErrorHandling(t *testing.T) {
 		Logger:    logrus.New(),
 	}
 
-	_, err := client.Get("test/endpoint")
+	_, err := client.Get("test/endpoint", url.Values{})
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "404 Not Found")
 }

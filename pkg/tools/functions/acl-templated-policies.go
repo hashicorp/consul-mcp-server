@@ -40,9 +40,7 @@ func getACLTemplatedPoliciesHandler(ctx context.Context, _ mcp.CallToolRequest, 
 		return mcp.NewToolResultError(fmt.Sprintf("failed to get http client for consul API: %v", err)), nil
 	}
 
-	uri := "acl/templated-policies"
-
-	templatedPoliciesResp, err := consulClient.Get(uri)
+	templatedPoliciesResp, err := consulClient.Get("acl/templated-policies", nil)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, "fetching ACL templated policies list from consul", err)
 	}
@@ -85,9 +83,7 @@ func getACLTemplatedPolicyHandler(ctx context.Context, request mcp.CallToolReque
 		return mcp.NewToolResultError(fmt.Sprintf("failed to get http client for consul API: %v", err)), nil
 	}
 
-	uri := fmt.Sprintf("acl/templated-policy/%s", policyName)
-
-	templatedPolicyResp, err := consulClient.Get(uri)
+	templatedPolicyResp, err := consulClient.Get(fmt.Sprintf("acl/templated-policy/%s", policyName), nil)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, fmt.Sprintf("fetching ACL templated policy '%s' details from consul", policyName), err)
 	}

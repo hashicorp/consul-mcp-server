@@ -60,12 +60,7 @@ func getOperatorRaftConfigurationHandler(ctx context.Context, request mcp.CallTo
 		queryParams.Set("stale", "true")
 	}
 
-	uri := (&url.URL{
-		Path:     "operator/raft/configuration",
-		RawQuery: queryParams.Encode(),
-	}).String()
-
-	raftResp, err := consulClient.Get(uri)
+	raftResp, err := consulClient.Get("operator/raft/configuration", queryParams)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, "fetching Raft configuration from consul operator", err)
 	}

@@ -53,12 +53,7 @@ func getOperatorAutopilotConfigurationHandler(ctx context.Context, request mcp.C
 		queryParams.Set("dc", dc)
 	}
 
-	uri := (&url.URL{
-		Path:     "operator/autopilot/configuration",
-		RawQuery: queryParams.Encode(),
-	}).String()
-
-	configResp, err := consulClient.Get(uri)
+	configResp, err := consulClient.Get("operator/autopilot/configuration", queryParams)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, "fetching Autopilot configuration from consul operator", err)
 	}
@@ -104,12 +99,7 @@ func getOperatorAutopilotHealthHandler(ctx context.Context, request mcp.CallTool
 		queryParams.Set("dc", dc)
 	}
 
-	uri := (&url.URL{
-		Path:     "operator/autopilot/health",
-		RawQuery: queryParams.Encode(),
-	}).String()
-
-	healthResp, err := consulClient.Get(uri)
+	healthResp, err := consulClient.Get("operator/autopilot/health", queryParams)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, "fetching Autopilot health from consul operator", err)
 	}
@@ -155,12 +145,7 @@ func getOperatorAutopilotStateHandler(ctx context.Context, request mcp.CallToolR
 		queryParams.Set("dc", dc)
 	}
 
-	uri := (&url.URL{
-		Path:     "operator/autopilot/state",
-		RawQuery: queryParams.Encode(),
-	}).String()
-
-	stateResp, err := consulClient.Get(uri)
+	stateResp, err := consulClient.Get("operator/autopilot/state", queryParams)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, "fetching Autopilot state from consul operator", err)
 	}

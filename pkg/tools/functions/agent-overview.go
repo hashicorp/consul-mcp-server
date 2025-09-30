@@ -40,15 +40,13 @@ func getAgentSelfHandler(ctx context.Context, _ mcp.CallToolRequest, logger *log
 		return mcp.NewToolResultError(fmt.Sprintf("failed to get http client for consul API: %v", err)), nil
 	}
 
-	uri := "agent/self"
-
-	agentResp, err := consulClient.Get(uri)
+	selfResp, err := consulClient.Get("agent/self", nil)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, "fetching agent self information", err)
 	}
 
-	agentJson := strings.TrimSpace(string(agentResp))
-	return mcp.NewToolResultText(agentJson), nil
+	selfJson := strings.TrimSpace(string(selfResp))
+	return mcp.NewToolResultText(selfJson), nil
 }
 
 func GetAgentConfigTool(logger *log.Logger) server.ServerTool {
@@ -74,9 +72,7 @@ func getAgentConfigHandler(ctx context.Context, _ mcp.CallToolRequest, logger *l
 		return mcp.NewToolResultError(fmt.Sprintf("failed to get http client for consul API: %v", err)), nil
 	}
 
-	uri := "agent/config"
-
-	configResp, err := consulClient.Get(uri)
+	configResp, err := consulClient.Get("agent/config", nil)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, "fetching agent configuration", err)
 	}
@@ -118,19 +114,14 @@ func getAgentMembersHandler(ctx context.Context, request mcp.CallToolRequest, lo
 	}
 
 	queryParams := url.Values{}
-	if wan != "" {
-		queryParams.Set("wan", wan)
+	if wan == "true" {
+		queryParams.Set("wan", "1")
 	}
 	if segment != "" {
 		queryParams.Set("segment", segment)
 	}
 
-	uri := (&url.URL{
-		Path:     "agent/members",
-		RawQuery: queryParams.Encode(),
-	}).String()
-
-	membersResp, err := consulClient.Get(uri)
+	membersResp, err := consulClient.Get("agent/members", queryParams)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, "fetching agent members", err)
 	}
@@ -160,10 +151,7 @@ func GetAgentMetricsTool(logger *log.Logger) server.ServerTool {
 }
 
 func getAgentMetricsHandler(ctx context.Context, request mcp.CallToolRequest, logger *log.Logger) (*mcp.CallToolResult, error) {
-	format, err := request.RequireString("format")
-	if err != nil {
-		return nil, utils.LogAndReturnError(logger, "required input: format is required", err)
-	}
+	format := request.GetString("format", "")
 
 	consulClient, err := client.GetGetConsulHttpClientFromContext(ctx, logger)
 	if err != nil {
@@ -171,16 +159,12 @@ func getAgentMetricsHandler(ctx context.Context, request mcp.CallToolRequest, lo
 		return mcp.NewToolResultError(fmt.Sprintf("failed to get http client for consul API: %v", err)), nil
 	}
 
-	queryParams := url.Values{
-		"format": {format},
+	queryParams := url.Values{}
+	if format != "" {
+		queryParams.Set("format", format)
 	}
 
-	uri := (&url.URL{
-		Path:     "agent/metrics",
-		RawQuery: queryParams.Encode(),
-	}).String()
-
-	metricsResp, err := consulClient.Get(uri)
+	metricsResp, err := consulClient.Get("agent/metrics", queryParams)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, "fetching agent metrics", err)
 	}
@@ -212,9 +196,7 @@ func getAgentHostHandler(ctx context.Context, _ mcp.CallToolRequest, logger *log
 		return mcp.NewToolResultError(fmt.Sprintf("failed to get http client for consul API: %v", err)), nil
 	}
 
-	uri := "agent/host"
-
-	hostResp, err := consulClient.Get(uri)
+	hostResp, err := consulClient.Get("agent/host", nil)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, "fetching agent host information", err)
 	}
@@ -246,9 +228,7 @@ func getAgentVersionHandler(ctx context.Context, _ mcp.CallToolRequest, logger *
 		return mcp.NewToolResultError(fmt.Sprintf("failed to get http client for consul API: %v", err)), nil
 	}
 
-	uri := "agent/version"
-
-	versionResp, err := consulClient.Get(uri)
+	versionResp, err := consulClient.Get("agent/version", nil)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, "fetching agent version", err)
 	}
@@ -280,13 +260,11 @@ func getAgentReloadHandler(ctx context.Context, _ mcp.CallToolRequest, logger *l
 		return mcp.NewToolResultError(fmt.Sprintf("failed to get http client for consul API: %v", err)), nil
 	}
 
-	uri := "agent/reload"
-
-	reloadResp, err := consulClient.Put(uri, nil)
+	reloadResp, err := consulClient.Get("agent/reload", nil)
 	if err != nil {
-		return nil, utils.LogAndReturnError(logger, "reloading agent configuration", err)
+		return nil, utils.LogAndReturnError(logger, "triggering agent reload", err)
 	}
 
-	reloadResult := strings.TrimSpace(string(reloadResp))
-	return mcp.NewToolResultText(reloadResult), nil
+	reloadJson := strings.TrimSpace(string(reloadResp))
+	return mcp.NewToolResultText(reloadJson), nil
 }

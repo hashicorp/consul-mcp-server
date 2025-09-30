@@ -53,12 +53,7 @@ func getOperatorAreasHandler(ctx context.Context, request mcp.CallToolRequest, l
 		queryParams.Set("dc", dc)
 	}
 
-	uri := (&url.URL{
-		Path:     "operator/area",
-		RawQuery: queryParams.Encode(),
-	}).String()
-
-	areasResp, err := consulClient.Get(uri)
+	areasResp, err := consulClient.Get("operator/area", queryParams)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, "fetching network areas from consul operator", err)
 	}
@@ -113,12 +108,7 @@ func getOperatorAreaHandler(ctx context.Context, request mcp.CallToolRequest, lo
 		queryParams.Set("dc", dc)
 	}
 
-	uri := (&url.URL{
-		Path:     fmt.Sprintf("operator/area/%s", areaId),
-		RawQuery: queryParams.Encode(),
-	}).String()
-
-	areaResp, err := consulClient.Get(uri)
+	areaResp, err := consulClient.Get(fmt.Sprintf("operator/area/%s", areaId), queryParams)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, fmt.Sprintf("fetching network area '%s' from consul operator", areaId), err)
 	}
@@ -173,12 +163,7 @@ func getOperatorAreaMembersHandler(ctx context.Context, request mcp.CallToolRequ
 		queryParams.Set("dc", dc)
 	}
 
-	uri := (&url.URL{
-		Path:     fmt.Sprintf("operator/area/%s/members", areaId),
-		RawQuery: queryParams.Encode(),
-	}).String()
-
-	membersResp, err := consulClient.Get(uri)
+	membersResp, err := consulClient.Get(fmt.Sprintf("operator/area/%s/members", areaId), queryParams)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, fmt.Sprintf("fetching members for network area '%s' from consul operator", areaId), err)
 	}
