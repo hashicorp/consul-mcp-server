@@ -33,6 +33,7 @@ crt-build:
 
 # Run tests
 test:
+	export CONSUL_MCP_SERVER_READ_GITHUB_RESOURCES=false
 	$(GO) test -v ./...
 
 # Run e2e tests
@@ -54,11 +55,11 @@ docker-build:
 
 # Run HTTP server locally
 run-http:
-	bin/$(BINARY_NAME) http --transport-port 8080 --transport-host 0.0.0.0
+	CONSUL_MCP_SERVER_READ_GITHUB_RESOURCES=false bin/$(BINARY_NAME) http --transport-port 8080 --transport-host 0.0.0.0
 
 # Run HTTP server with security settings
 run-http-secure:
-	MCP_ALLOWED_ORIGINS="http://localhost:3000,https://example.com" MCP_CORS_MODE="development" bin/$(BINARY_NAME) http --transport-port 8080 --transport-host 0.0.0.0
+	CONSUL_MCP_SERVER_READ_GITHUB_RESOURCES=false MCP_ALLOWED_ORIGINS="http://localhost:3000,https://example.com" MCP_CORS_MODE="development" bin/$(BINARY_NAME) http --transport-port 8080 --transport-host 0.0.0.0
 
 # Run HTTP server in Docker
 docker-run-http:
@@ -102,4 +103,3 @@ help:
 	@echo "  test-http      - Test StreamableHTTP health endpoint"
 	@echo "  cleanup-test-containers - Stop and remove all test containers"
 	@echo "  help           - Show this help message"
-
