@@ -40,9 +40,7 @@ func getStatusLeaderHandler(ctx context.Context, _ mcp.CallToolRequest, logger *
 		return mcp.NewToolResultError(fmt.Sprintf("failed to get http client for consul API: %v", err)), nil
 	}
 
-	uri := "status/leader"
-
-	leaderResp, err := consulClient.Get(uri)
+	leaderResp, err := consulClient.Get("status/leader", nil)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, "fetching Raft leader from consul status", err)
 	}
@@ -76,9 +74,7 @@ func getStatusPeersHandler(ctx context.Context, _ mcp.CallToolRequest, logger *l
 		return mcp.NewToolResultError(fmt.Sprintf("failed to get http client for consul API: %v", err)), nil
 	}
 
-	uri := "status/peers"
-
-	peersResp, err := consulClient.Get(uri)
+	peersResp, err := consulClient.Get("status/peers", nil)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, "fetching Raft peers from consul status", err)
 	}

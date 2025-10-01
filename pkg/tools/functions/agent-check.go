@@ -50,12 +50,7 @@ func getAgentChecksHandler(ctx context.Context, request mcp.CallToolRequest, log
 		queryParams.Set("filter", filter)
 	}
 
-	uri := (&url.URL{
-		Path:     "agent/checks",
-		RawQuery: queryParams.Encode(),
-	}).String()
-
-	checksResp, err := consulClient.Get(uri)
+	checksResp, err := consulClient.Get("agent/checks", queryParams)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, "fetching agent checks", err)
 	}
@@ -96,9 +91,7 @@ func getAgentCheckHandler(ctx context.Context, request mcp.CallToolRequest, logg
 		return mcp.NewToolResultError(fmt.Sprintf("failed to get http client for consul API: %v", err)), nil
 	}
 
-	uri := fmt.Sprintf("agent/health/check/id/%s", checkID)
-
-	checkResp, err := consulClient.Get(uri)
+	checkResp, err := consulClient.Get(fmt.Sprintf("agent/health/check/id/%s", checkID), nil)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, fmt.Sprintf("fetching agent check '%s'", checkID), err)
 	}
@@ -139,9 +132,7 @@ func getAgentCheckByNameHandler(ctx context.Context, request mcp.CallToolRequest
 		return mcp.NewToolResultError(fmt.Sprintf("failed to get http client for consul API: %v", err)), nil
 	}
 
-	uri := fmt.Sprintf("agent/health/check/name/%s", checkName)
-
-	checkResp, err := consulClient.Get(uri)
+	checkResp, err := consulClient.Get(fmt.Sprintf("agent/health/check/name/%s", checkName), nil)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, fmt.Sprintf("fetching agent check by name '%s'", checkName), err)
 	}
@@ -195,12 +186,7 @@ func getAgentServiceHealthHandler(ctx context.Context, request mcp.CallToolReque
 		"format": {format},
 	}
 
-	uri := (&url.URL{
-		Path:     fmt.Sprintf("agent/health/service/id/%s", serviceID),
-		RawQuery: queryParams.Encode(),
-	}).String()
-
-	healthResp, err := consulClient.Get(uri)
+	healthResp, err := consulClient.Get(fmt.Sprintf("agent/health/service/id/%s", serviceID), queryParams)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, fmt.Sprintf("fetching health status for service '%s'", serviceID), err)
 	}
@@ -254,12 +240,7 @@ func getAgentServiceHealthByNameHandler(ctx context.Context, request mcp.CallToo
 		"format": {format},
 	}
 
-	uri := (&url.URL{
-		Path:     fmt.Sprintf("agent/health/service/name/%s", serviceName),
-		RawQuery: queryParams.Encode(),
-	}).String()
-
-	healthResp, err := consulClient.Get(uri)
+	healthResp, err := consulClient.Get(fmt.Sprintf("agent/health/service/name/%s", serviceName), queryParams)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, fmt.Sprintf("fetching health status for service by name '%s'", serviceName), err)
 	}

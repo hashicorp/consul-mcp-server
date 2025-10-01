@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
@@ -22,6 +23,7 @@ import (
 
 const (
 	ConsulSkipTLSVerify = "CONSUL_SKIP_VERIFY"
+	ConsulEnterprise    = "CONSUL_ENTERPRISE"
 )
 
 type ConsulHttpClient struct {
@@ -111,24 +113,36 @@ func GetGetConsulHttpClientFromContext(ctx context.Context, logger *log.Logger) 
 	return NewConsulClient(ctx, session.SessionID(), logger), nil
 }
 
-func (c *ConsulHttpClient) Put(uri string, data interface{}, callOptions ...string) ([]byte, error) {
-	return c.call("PUT", uri, data, callOptions...)
+func (c *ConsulHttpClient) Put(path string, queryParams url.Values, data interface{}, callOptions ...string) ([]byte, error) {
+	return c.call("PUT", path, queryParams, data, callOptions...)
 }
 
-func (c *ConsulHttpClient) Post(uri string, data interface{}, callOptions ...string) ([]byte, error) {
-	return c.call("POST", uri, data, callOptions...)
+func (c *ConsulHttpClient) Post(path string, queryParams url.Values, data interface{}, callOptions ...string) ([]byte, error) {
+	return c.call("POST", path, queryParams, data, callOptions...)
 }
 
-func (c *ConsulHttpClient) call(method string, uri string, data interface{}, callOptions ...string) ([]byte, error) {
+func (c *ConsulHttpClient) call(method string, path string, queryParams url.Values, data interface{}, callOptions ...string) ([]byte, error) {
 	ver := "v1"
 	if len(callOptions) > 0 {
 		ver = callOptions[0] // API version will be the first optional arg to this function
 	}
 
-	parsedURL, err := url.Parse(fmt.Sprintf("%s/%s/%s", c.Address, ver, uri))
+	parsedURL, err := url.Parse(fmt.Sprintf("%s/%s/%s", c.Address, ver, path))
 	if err != nil {
 		return nil, fmt.Errorf("error parsing the URL: %w", err)
 	}
+
+	// Remove namespace and partition query parameters if not enterprise
+	if !isEnterprise() {
+		queryParams.Del("ns")
+		queryParams.Del("partition")
+	}
+
+	// Add query parameters if provided
+	if queryParams != nil && len(queryParams) > 0 {
+		parsedURL.RawQuery = queryParams.Encode()
+	}
+
 	c.Logger.Debugf("Requested URL: %s", parsedURL)
 
 	var reqBody io.Reader
@@ -178,16 +192,28 @@ func (c *ConsulHttpClient) call(method string, uri string, data interface{}, cal
 	return body, nil
 }
 
-func (c *ConsulHttpClient) Get(uri string, callOptions ...string) ([]byte, error) {
+func (c *ConsulHttpClient) Get(path string, queryParams url.Values, callOptions ...string) ([]byte, error) {
 	ver := "v1"
 	if len(callOptions) > 0 {
 		ver = callOptions[0] // API version will be the first optional arg to this function
 	}
 
-	parsedURL, err := url.Parse(fmt.Sprintf("%s/%s/%s", c.Address, ver, uri))
+	parsedURL, err := url.Parse(fmt.Sprintf("%s/%s/%s", c.Address, ver, path))
 	if err != nil {
 		return nil, fmt.Errorf("error parsing the URL: %w", err)
 	}
+
+	// Remove namespace and partition query parameters if not enterprise
+	if !isEnterprise() {
+		queryParams.Del("ns")
+		queryParams.Del("partition")
+	}
+
+	// Add query parameters if provided
+	if queryParams != nil && len(queryParams) > 0 {
+		parsedURL.RawQuery = queryParams.Encode()
+	}
+
 	c.Logger.Debugf("Requested URL: %s", parsedURL)
 
 	req, err := http.NewRequest("GET", parsedURL.String(), nil)
@@ -224,7 +250,20 @@ func (c *ConsulHttpClient) Get(uri string, callOptions ...string) ([]byte, error
 	return body, nil
 }
 
+// if the consul server is enterprise, we enable enterprise features. default is true
+// API calls to find if
+func isEnterprise() bool {
+	// Check environment variable to determine if Consul Enterprise features should be enabled
+	envVal := utils.GetEnv(ConsulEnterprise, "true")
+	isEnterprise, err := strconv.ParseBool(strings.ToLower(envVal))
+	if err != nil {
+		return true
+	}
+	return isEnterprise
+}
+
 func parseSkipTLSVerify(ctx context.Context) bool {
+	// First check context for session-specific setting
 	skipTLSVerifyStr, ok := ctx.Value(contextKey(ConsulSkipTLSVerify)).(string)
 	if ok && skipTLSVerifyStr != "" {
 		skipTLSVerify, err := strconv.ParseBool(skipTLSVerifyStr)
@@ -232,6 +271,15 @@ func parseSkipTLSVerify(ctx context.Context) bool {
 			return skipTLSVerify
 		}
 	}
+
+	// Fallback to environment variable
+	envSkipTLS := utils.GetEnv(ConsulSkipTLSVerify, "false")
+	skipTLSVerify, err := strconv.ParseBool(envSkipTLS)
+	if err == nil {
+		return skipTLSVerify
+	}
+
+	// Default to false for security
 	return false
 }
 

@@ -1,3 +1,9 @@
+## 0.1.3 (Sep 26, 2025)
+
+FEATURES
+- Bug fix for the (issue)[https://github.com/hashicorp/consul-mcp-server/issues/16] to support consul CE
+- Enhance TLS configuration
+
 ## 0.1.2 (Sep 25, 2025)
 
 FEATURES

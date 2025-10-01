@@ -78,12 +78,7 @@ func getHealthNodeHandler(ctx context.Context, request mcp.CallToolRequest, logg
 		queryParams.Set("filter", filter)
 	}
 
-	uri := (&url.URL{
-		Path:     fmt.Sprintf("health/node/%s", nodeName),
-		RawQuery: queryParams.Encode(),
-	}).String()
-
-	healthResp, err := consulClient.Get(uri)
+	healthResp, err := consulClient.Get(fmt.Sprintf("health/node/%s", nodeName), queryParams)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, fmt.Sprintf("fetching health information for node '%s' from consul", nodeName), err)
 	}
@@ -174,12 +169,7 @@ func getHealthChecksHandler(ctx context.Context, request mcp.CallToolRequest, lo
 		queryParams.Set("filter", filter)
 	}
 
-	uri := (&url.URL{
-		Path:     fmt.Sprintf("health/checks/%s", serviceName),
-		RawQuery: queryParams.Encode(),
-	}).String()
-
-	checksResp, err := consulClient.Get(uri)
+	checksResp, err := consulClient.Get(fmt.Sprintf("health/checks/%s", serviceName), queryParams)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, fmt.Sprintf("fetching health checks for service '%s' from consul", serviceName), err)
 	}
@@ -284,12 +274,7 @@ func getHealthServiceHandler(ctx context.Context, request mcp.CallToolRequest, l
 		queryParams.Set("filter", filter)
 	}
 
-	uri := (&url.URL{
-		Path:     fmt.Sprintf("health/service/%s", serviceName),
-		RawQuery: queryParams.Encode(),
-	}).String()
-
-	serviceResp, err := consulClient.Get(uri)
+	serviceResp, err := consulClient.Get(fmt.Sprintf("health/service/%s", serviceName), queryParams)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, fmt.Sprintf("fetching health information for service '%s' from consul", serviceName), err)
 	}
@@ -394,12 +379,7 @@ func getHealthConnectHandler(ctx context.Context, request mcp.CallToolRequest, l
 		queryParams.Set("filter", filter)
 	}
 
-	uri := (&url.URL{
-		Path:     fmt.Sprintf("health/connect/%s", serviceName),
-		RawQuery: queryParams.Encode(),
-	}).String()
-
-	connectResp, err := consulClient.Get(uri)
+	connectResp, err := consulClient.Get(fmt.Sprintf("health/connect/%s", serviceName), queryParams)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, fmt.Sprintf("fetching health information for Connect service '%s' from consul", serviceName), err)
 	}
@@ -504,12 +484,7 @@ func getHealthIngressHandler(ctx context.Context, request mcp.CallToolRequest, l
 		queryParams.Set("filter", filter)
 	}
 
-	uri := (&url.URL{
-		Path:     fmt.Sprintf("health/ingress/%s", serviceName),
-		RawQuery: queryParams.Encode(),
-	}).String()
-
-	ingressResp, err := consulClient.Get(uri)
+	ingressResp, err := consulClient.Get(fmt.Sprintf("health/ingress/%s", serviceName), queryParams)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, fmt.Sprintf("fetching health information for ingress gateway '%s' from consul", serviceName), err)
 	}
@@ -613,12 +588,7 @@ func getHealthStateHandler(ctx context.Context, request mcp.CallToolRequest, log
 		queryParams.Set("filter", filter)
 	}
 
-	uri := (&url.URL{
-		Path:     fmt.Sprintf("health/state/%s", state),
-		RawQuery: queryParams.Encode(),
-	}).String()
-
-	stateResp, err := consulClient.Get(uri)
+	stateResp, err := consulClient.Get(fmt.Sprintf("health/state/%s", state), queryParams)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, fmt.Sprintf("fetching health state '%s' from consul", state), err)
 	}

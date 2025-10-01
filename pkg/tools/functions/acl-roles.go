@@ -52,15 +52,12 @@ func getACLRolesHandler(ctx context.Context, request mcp.CallToolRequest, logger
 		return mcp.NewToolResultError(fmt.Sprintf("failed to get http client for consul API: %v", err)), nil
 	}
 
-	uri := (&url.URL{
-		Path: "acl/roles",
-		RawQuery: url.Values{
-			"partition": {ap},
-			"ns":        {ns},
-		}.Encode(),
-	}).String()
+	queryParams := url.Values{
+		"partition": {ap},
+		"ns":        {ns},
+	}
 
-	rolesResp, err := consulClient.Get(uri)
+	rolesResp, err := consulClient.Get("acl/roles", queryParams)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, "fetching ACL roles list from consul", err)
 	}
@@ -114,15 +111,12 @@ func getACLRoleHandler(ctx context.Context, request mcp.CallToolRequest, logger 
 		return mcp.NewToolResultError(fmt.Sprintf("failed to get http client for consul API: %v", err)), nil
 	}
 
-	uri := (&url.URL{
-		Path: fmt.Sprintf("acl/role/%s", roleId),
-		RawQuery: url.Values{
-			"partition": {ap},
-			"ns":        {ns},
-		}.Encode(),
-	}).String()
+	queryParams := url.Values{
+		"partition": {ap},
+		"ns":        {ns},
+	}
 
-	roleResp, err := consulClient.Get(uri)
+	roleResp, err := consulClient.Get(fmt.Sprintf("acl/role/%s", roleId), queryParams)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, fmt.Sprintf("fetching ACL role '%s' details from consul", roleId), err)
 	}

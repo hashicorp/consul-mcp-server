@@ -104,12 +104,7 @@ func consulidentityResource(logger *log.Logger) (mcp.Resource, server.ResourceHa
 			// Build query parameters
 			queryParams := url.Values{}
 
-			uri := (&url.URL{
-				Path:     "connect/ca/roots",
-				RawQuery: queryParams.Encode(),
-			}).String()
-
-			rootsResp, err := consulClient.Get(uri)
+			rootsResp, err := consulClient.Get("connect/ca/roots", queryParams)
 			if err != nil {
 				return nil, utils.LogAndReturnError(logger, "fetching Connect CA roots from consul", err)
 			}

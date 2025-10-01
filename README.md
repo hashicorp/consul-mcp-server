@@ -53,8 +53,57 @@ Modern HTTP-based transport supporting both direct HTTP requests and Server-Sent
 | `MCP_CORS_MODE` | CORS mode: `strict`, `development`, or `disabled`                                                                                             | `strict`                |
 | `CONSUL_HTTP_ADDR` | Consul agent HTTP API address                                                                                                                 | `http://127.0.0.1:8500` |
 | `CONSUL_HTTP_TOKEN` | Consul ACL token for authentication                                                                                                           | `""` (empty)            |
-| `CONSUL_HTTP_SSL` | Enable HTTPS for Consul API                                                                                                                   | `false`                 |
+| `CONSUL_SKIP_VERIFY` | Skip TLS certificate verification (use only for development/testing)                                                                          | `false`                 |
+| `CONSUL_ENTERPRISE` | Enable Consul Enterprise features and API endpoints                                                                                           | `true`                   |
 | `CONSUL_MCP_SERVER_READ_GITHUB_RESOURCES` | For latest Consul context, the flag enables the fetching resource from https://github.com/hashicorp/consul/blob/main/website/content/api-docs | `true`                  |
+
+## TLS Configuration
+
+The Consul MCP Server supports secure connections to Consul clusters with proper TLS configuration. Here are the key settings:
+
+### Certificate Verification
+
+By default, the MCP server verifies TLS certificates when connecting to HTTPS Consul endpoints. If your Consul cluster uses self-signed certificates or certificates that cannot be verified against the system's certificate store, you may encounter errors like:
+
+```
+tls: failed to verify certificate: x509: "________" certificate is not trusted
+```
+
+### Disabling Certificate Verification (Development/Testing Only)
+
+**⚠️ Security Warning**: Only disable certificate verification in development or testing environments. Never use this in production.
+
+To disable TLS certificate verification, set the environment variable:
+
+```bash
+export CONSUL_SKIP_VERIFY=true
+```
+
+### Example Configurations for Development
+
+**Development with self-signed certificates:**
+```bash
+export CONSUL_HTTP_ADDR=https://consul.example.com:8501
+export CONSUL_HTTP_TOKEN=your-acl-token
+export CONSUL_SKIP_VERIFY=true
+```
+
+**Production with proper certificates:**
+```bash
+export CONSUL_HTTP_ADDR=https://consul.example.com:8501
+export CONSUL_HTTP_TOKEN=your-acl-token
+export CONSUL_SKIP_VERIFY=false
+# CONSUL_SKIP_VERIFY should remain false (default)
+```
+
+**Docker example with TLS skip verification:**
+```bash
+docker run -i --rm \
+  -e CONSUL_HTTP_ADDR=https://host.docker.internal:8501 \
+  -e CONSUL_HTTP_TOKEN=your-token \
+  -e CONSUL_SKIP_VERIFY=true \
+  hashicorp/consul-mcp-server
+```
 
 ## Command Line Options
 
@@ -235,4 +284,3 @@ go install github.com/hashicorp/consul-mcp-server/cmd/consul-mcp-server@main
   }
 }
 ```
-

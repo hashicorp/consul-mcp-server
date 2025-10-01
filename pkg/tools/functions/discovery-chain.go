@@ -105,12 +105,7 @@ func getDiscoveryChainHandler(ctx context.Context, request mcp.CallToolRequest, 
 		queryParams.Set("override-connect-timeout", overrideConnectTimeout)
 	}
 
-	uri := (&url.URL{
-		Path:     fmt.Sprintf("discovery-chain/%s", serviceName),
-		RawQuery: queryParams.Encode(),
-	}).String()
-
-	chainResp, err := consulClient.Get(uri)
+	chainResp, err := consulClient.Get(fmt.Sprintf("discovery-chain/%s", serviceName), queryParams)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, fmt.Sprintf("fetching discovery chain for service '%s' from consul", serviceName), err)
 	}

@@ -47,14 +47,11 @@ func getExportedServicesHandler(ctx context.Context, request mcp.CallToolRequest
 		return mcp.NewToolResultError(fmt.Sprintf("failed to get http client for consul API: %v", err)), nil
 	}
 
-	uri := (&url.URL{
-		Path: "exported-services",
-		RawQuery: url.Values{
-			"partition": {ap},
-		}.Encode(),
-	}).String()
+	queryParams := url.Values{
+		"partition": {ap},
+	}
 
-	exportedResp, err := consulClient.Get(uri)
+	exportedResp, err := consulClient.Get("exported-services", queryParams)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, "fetching exported services list from consul", err)
 	}

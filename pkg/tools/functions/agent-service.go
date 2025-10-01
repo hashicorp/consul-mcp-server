@@ -50,12 +50,7 @@ func getAgentServicesHandler(ctx context.Context, request mcp.CallToolRequest, l
 		queryParams.Set("filter", filter)
 	}
 
-	uri := (&url.URL{
-		Path:     "agent/services",
-		RawQuery: queryParams.Encode(),
-	}).String()
-
-	servicesResp, err := consulClient.Get(uri)
+	servicesResp, err := consulClient.Get("agent/services", queryParams)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, "fetching agent services", err)
 	}
@@ -96,9 +91,7 @@ func getAgentServiceHandler(ctx context.Context, request mcp.CallToolRequest, lo
 		return mcp.NewToolResultError(fmt.Sprintf("failed to get http client for consul API: %v", err)), nil
 	}
 
-	uri := fmt.Sprintf("agent/service/%s", serviceID)
-
-	serviceResp, err := consulClient.Get(uri)
+	serviceResp, err := consulClient.Get(fmt.Sprintf("agent/service/%s", serviceID), nil)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, fmt.Sprintf("fetching agent service '%s'", serviceID), err)
 	}
@@ -139,9 +132,7 @@ func getAgentServiceConfigurationHandler(ctx context.Context, request mcp.CallTo
 		return mcp.NewToolResultError(fmt.Sprintf("failed to get http client for consul API: %v", err)), nil
 	}
 
-	uri := fmt.Sprintf("agent/service/%s/configuration", serviceID)
-
-	configResp, err := consulClient.Get(uri)
+	configResp, err := consulClient.Get(fmt.Sprintf("agent/service/%s/configuration", serviceID), nil)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, fmt.Sprintf("fetching agent service configuration for '%s'", serviceID), err)
 	}
@@ -173,9 +164,7 @@ func getAgentServiceLocalStateHandler(ctx context.Context, _ mcp.CallToolRequest
 		return mcp.NewToolResultError(fmt.Sprintf("failed to get http client for consul API: %v", err)), nil
 	}
 
-	uri := "agent/local-state"
-
-	stateResp, err := consulClient.Get(uri)
+	stateResp, err := consulClient.Get("agent/local-state", nil)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, "fetching agent local state", err)
 	}

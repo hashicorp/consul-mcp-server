@@ -52,15 +52,12 @@ func getACLPoliciesHandler(ctx context.Context, request mcp.CallToolRequest, log
 		return mcp.NewToolResultError(fmt.Sprintf("failed to get http client for consul API: %v", err)), nil
 	}
 
-	uri := (&url.URL{
-		Path: "acl/policies",
-		RawQuery: url.Values{
-			"partition": {ap},
-			"ns":        {ns},
-		}.Encode(),
-	}).String()
+	queryParams := url.Values{
+		"partition": {ap},
+		"ns":        {ns},
+	}
 
-	policiesResp, err := consulClient.Get(uri)
+	policiesResp, err := consulClient.Get("acl/policies", queryParams)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, "fetching ACL policies list from consul", err)
 	}
@@ -114,15 +111,12 @@ func getACLPolicyHandler(ctx context.Context, request mcp.CallToolRequest, logge
 		return mcp.NewToolResultError(fmt.Sprintf("failed to get http client for consul API: %v", err)), nil
 	}
 
-	uri := (&url.URL{
-		Path: fmt.Sprintf("acl/policy/%s", policyId),
-		RawQuery: url.Values{
-			"partition": {ap},
-			"ns":        {ns},
-		}.Encode(),
-	}).String()
+	queryParams := url.Values{
+		"partition": {ap},
+		"ns":        {ns},
+	}
 
-	policyResp, err := consulClient.Get(uri)
+	policyResp, err := consulClient.Get(fmt.Sprintf("acl/policy/%s", policyId), queryParams)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, fmt.Sprintf("fetching ACL policy '%s' details from consul", policyId), err)
 	}

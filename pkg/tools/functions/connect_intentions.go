@@ -68,12 +68,7 @@ func getConnectIntentionsHandler(ctx context.Context, request mcp.CallToolReques
 		queryParams.Set("filter", filter)
 	}
 
-	uri := (&url.URL{
-		Path:     "connect/intentions",
-		RawQuery: queryParams.Encode(),
-	}).String()
-
-	intentionsResp, err := consulClient.Get(uri)
+	intentionsResp, err := consulClient.Get("connect/intentions", queryParams)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, "fetching Connect intentions from consul", err)
 	}
@@ -116,9 +111,7 @@ func getConnectIntentionHandler(ctx context.Context, request mcp.CallToolRequest
 		return mcp.NewToolResultError(fmt.Sprintf("failed to get http client for consul API: %v", err)), nil
 	}
 
-	uri := fmt.Sprintf("connect/intentions/%s", intentionId)
-
-	intentionResp, err := consulClient.Get(uri)
+	intentionResp, err := consulClient.Get(fmt.Sprintf("connect/intentions/%s", intentionId), nil)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, fmt.Sprintf("fetching Connect intention '%s' from consul", intentionId), err)
 	}
@@ -194,12 +187,7 @@ func getConnectIntentionMatchHandler(ctx context.Context, request mcp.CallToolRe
 		"ns":        {ns},
 	}
 
-	uri := (&url.URL{
-		Path:     "connect/intentions/match",
-		RawQuery: queryParams.Encode(),
-	}).String()
-
-	matchResp, err := consulClient.Get(uri)
+	matchResp, err := consulClient.Get("connect/intentions/match", queryParams)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, fmt.Sprintf("fetching Connect intention matches for %s '%s' from consul", by, name), err)
 	}
@@ -276,12 +264,7 @@ func getConnectIntentionCheckHandler(ctx context.Context, request mcp.CallToolRe
 		"ns":          {ns},
 	}
 
-	uri := (&url.URL{
-		Path:     "connect/intentions/check",
-		RawQuery: queryParams.Encode(),
-	}).String()
-
-	checkResp, err := consulClient.Get(uri)
+	checkResp, err := consulClient.Get("connect/intentions/check", queryParams)
 	if err != nil {
 		return nil, utils.LogAndReturnError(logger, fmt.Sprintf("checking Connect intention authorization from '%s' to '%s' from consul", source, destination), err)
 	}
