@@ -105,6 +105,29 @@ func getACLTokensHandler(ctx context.Context, request mcp.CallToolRequest, logge
 		return nil, utils.LogAndReturnError(logger, "fetching ACL tokens list from consul", err)
 	}
 
+	// Parse the JSON response using official Consul SDK types
+	var tokens []*api.ACLToken
+	if err := json.Unmarshal(tokensResp, &tokens); err != nil {
+		return nil, utils.LogAndReturnError(logger, "parsing ACL token self response", err)
+	}
+
+	for _, token := range tokens {
+		// Redact SecretID field
+		if token.SecretID != "" && token.SecretID != "anonymous" {
+			token.SecretID = "[REDACTED]"
+		}
+	}
+
+	// parse back to JSON
+	if len(tokens) == 0 {
+		tokensResp = []byte("[]")
+	} else {
+		tokensResp, err = json.MarshalIndent(tokens, "", "  ")
+		if err != nil {
+			return nil, utils.LogAndReturnError(logger, "marshaling redacted ACL tokens", err)
+		}
+	}
+
 	// convert tokensResp i.e. bytes[] to text
 	tokensJson := strings.TrimSpace(string(tokensResp))
 	return mcp.NewToolResultText(tokensJson), nil

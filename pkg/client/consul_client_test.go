@@ -143,7 +143,7 @@ func TestConsulClientHTTPMethods(t *testing.T) {
 
 	t.Run("POST request", func(t *testing.T) {
 		data := map[string]string{"key": "value"}
-		resp, err := client.Post("test/endpoint", data)
+		resp, err := client.Post("test/endpoint", url.Values{}, data)
 		require.NoError(t, err)
 
 		var result map[string]interface{}
@@ -154,7 +154,7 @@ func TestConsulClientHTTPMethods(t *testing.T) {
 
 	t.Run("PUT request", func(t *testing.T) {
 		data := map[string]string{"key": "value"}
-		resp, err := client.Put("test/endpoint", data)
+		resp, err := client.Put("test/endpoint", url.Values{}, data)
 		require.NoError(t, err)
 
 		var result map[string]interface{}

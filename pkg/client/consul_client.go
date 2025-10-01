@@ -113,24 +113,36 @@ func GetGetConsulHttpClientFromContext(ctx context.Context, logger *log.Logger) 
 	return NewConsulClient(ctx, session.SessionID(), logger), nil
 }
 
-func (c *ConsulHttpClient) Put(uri string, data interface{}, callOptions ...string) ([]byte, error) {
-	return c.call("PUT", uri, data, callOptions...)
+func (c *ConsulHttpClient) Put(path string, queryParams url.Values, data interface{}, callOptions ...string) ([]byte, error) {
+	return c.call("PUT", path, queryParams, data, callOptions...)
 }
 
-func (c *ConsulHttpClient) Post(uri string, data interface{}, callOptions ...string) ([]byte, error) {
-	return c.call("POST", uri, data, callOptions...)
+func (c *ConsulHttpClient) Post(path string, queryParams url.Values, data interface{}, callOptions ...string) ([]byte, error) {
+	return c.call("POST", path, queryParams, data, callOptions...)
 }
 
-func (c *ConsulHttpClient) call(method string, uri string, data interface{}, callOptions ...string) ([]byte, error) {
+func (c *ConsulHttpClient) call(method string, path string, queryParams url.Values, data interface{}, callOptions ...string) ([]byte, error) {
 	ver := "v1"
 	if len(callOptions) > 0 {
 		ver = callOptions[0] // API version will be the first optional arg to this function
 	}
 
-	parsedURL, err := url.Parse(fmt.Sprintf("%s/%s/%s", c.Address, ver, uri))
+	parsedURL, err := url.Parse(fmt.Sprintf("%s/%s/%s", c.Address, ver, path))
 	if err != nil {
 		return nil, fmt.Errorf("error parsing the URL: %w", err)
 	}
+
+	// Remove namespace and partition query parameters if not enterprise
+	if !isEnterprise() {
+		queryParams.Del("ns")
+		queryParams.Del("partition")
+	}
+
+	// Add query parameters if provided
+	if queryParams != nil && len(queryParams) > 0 {
+		parsedURL.RawQuery = queryParams.Encode()
+	}
+
 	c.Logger.Debugf("Requested URL: %s", parsedURL)
 
 	var reqBody io.Reader
