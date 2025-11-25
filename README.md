@@ -295,3 +295,25 @@ go install github.com/hashicorp/consul-mcp-server/cmd/consul-mcp-server@main
   }
 }
 ```
+
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch
+3. Make your changes
+4. Run tests
+5. Submit a pull request
+
+## License
+
+This project is licensed under the terms of the MPL-2.0 open source license. Please refer to [LICENSE](./LICENSE) file for the full terms.
+
+## Security
+
+For security issues, please contact security@hashicorp.com or follow our [security policy](https://www.hashicorp.com/en/trust/security/vulnerability-management).
+
+## Support
+
+For bug reports and feature requests, please open an issue on GitHub.
+
+For general questions and discussions, open a GitHub Discussion.
