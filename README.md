@@ -108,6 +108,17 @@ docker run -i --rm \
 ## Command Line Options
 
 ```bash
+# Download the Binary
+# Find the compatible build for your operating system from the official releases page.
+# e.g. for Mac Apple silicon
+curl -LO https://releases.hashicorp.com/consul-mcp-server/0.1.1/consul-mcp-server_0.1.1_darwin_arm64.zip && unzip ./consul-mcp-server_0.1.1_darwin_arm64.zip
+
+# common step to start the server
+export CONSUL_HTTP_ADDR=<consul addr>
+export CONSUL_HTTP_TOKEN=<consul double default acl token with read privilege>
+./consul-mcp-server streamable-http --transport-port <8080 default> --transport-host 0.0.0.0
+
+
 # Stdio mode
 consul-mcp-server stdio [--log-file /path/to/log]
 
