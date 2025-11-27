@@ -108,6 +108,17 @@ docker run -i --rm \
 ## Command Line Options
 
 ```bash
+# Download the Binary
+# Find the compatible build for your operating system from the official releases page.
+# e.g. for Mac Apple silicon
+curl -LO https://releases.hashicorp.com/consul-mcp-server/0.1.1/consul-mcp-server_0.1.1_darwin_arm64.zip && unzip ./consul-mcp-server_0.1.1_darwin_arm64.zip
+
+# common step to start the server
+export CONSUL_HTTP_ADDR=<consul addr>
+export CONSUL_HTTP_TOKEN=<consul double default acl token with read privilege>
+./consul-mcp-server streamable-http --transport-port <8080 default> --transport-host 0.0.0.0
+
+
 # Stdio mode
 consul-mcp-server stdio [--log-file /path/to/log]
 
@@ -284,3 +295,25 @@ go install github.com/hashicorp/consul-mcp-server/cmd/consul-mcp-server@main
   }
 }
 ```
+
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch
+3. Make your changes
+4. Run tests
+5. Submit a pull request
+
+## License
+
+This project is licensed under the terms of the MPL-2.0 open source license. Please refer to [LICENSE](./LICENSE) file for the full terms.
+
+## Security
+
+For security issues, please contact security@hashicorp.com or follow our [security policy](https://www.hashicorp.com/en/trust/security/vulnerability-management).
+
+## Support
+
+For bug reports and feature requests, please open an issue on GitHub.
+
+For general questions and discussions, open a GitHub Discussion.
