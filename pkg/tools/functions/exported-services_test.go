@@ -1,5 +1,5 @@
 // filepath: /Users/srahul3/git/consul-mcp-server/pkg/tools/functions/exported-services_test.go
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2025
 // SPDX-License-Identifier: MPL-2.0
 
 package functions
