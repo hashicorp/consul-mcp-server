@@ -298,11 +298,7 @@ go install github.com/hashicorp/consul-mcp-server/cmd/consul-mcp-server@main
 
 ## Contributing
 
-1. Fork the repository
-2. Create your feature branch
-3. Make your changes
-4. Run tests
-5. Submit a pull request
+Thank you for your interest in contributing! Please refer to [CONTRIBUTING.md](https://github.com/hashicorp/consul-mcp-server/blob/main/CONTRIBUTING.md)
 
 ## License
 
