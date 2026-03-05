@@ -193,10 +193,6 @@ func streamableHTTPServerInit(ctx context.Context, hcServer *server.MCPServer, l
 		return fmt.Errorf("TLS configuration error: %w", err)
 	}
 
-	if tlsConfig != nil {
-		opts = append(opts, server.WithTLSCert(tlsConfig.CertFile, tlsConfig.KeyFile))
-	}
-
 	// Log the endpoint path being used
 	logger.Infof("Using endpoint path: %s", endpointPath)
 
@@ -269,8 +265,13 @@ func streamableHTTPServerInit(ctx context.Context, hcServer *server.MCPServer, l
 	// Start server in goroutine
 	errC := make(chan error, 1)
 	go func() {
-		logger.Infof("Starting StreamableHTTP server on %s%s", addr, endpointPath)
-		errC <- httpServer.ListenAndServe()
+		if tlsConfig != nil {
+			logger.Infof("Starting StreamableHTTP server with TLS on %s%s", addr, endpointPath)
+			errC <- httpServer.ListenAndServeTLS(tlsConfig.CertFile, tlsConfig.KeyFile)
+		} else {
+			logger.Infof("Starting StreamableHTTP server on %s%s", addr, endpointPath)
+			errC <- httpServer.ListenAndServe()
+		}
 	}()
 
 	// Wait for shutdown signal
