@@ -1,8 +1,3 @@
-## 0.1.4 (March 5, 2026)
-
-FEATURES
-- Add TLS support for StreamableHTTP server [GH-42](https://github.com/hashicorp/consul-mcp-server/pull/42)
-
 ## 0.1.3 (Sep 26, 2025)
 
 FEATURES
