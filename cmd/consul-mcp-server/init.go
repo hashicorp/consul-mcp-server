@@ -257,9 +257,9 @@ func streamableHTTPServerInit(ctx context.Context, hcServer *server.MCPServer, l
 		logger.Infof("TLS enabled with certificate: %s", tlsConfig.CertFile)
 	} else {
 		if !client.IsLocalHost(host) {
-			return fmt.Errorf("TLS is required for non-localhost binding (%s). Set MCP_TLS_CERT_FILE and MCP_TLS_KEY_FILE environment variables", host)
+			return fmt.Errorf("TLS is required for non-localhost binding (%s). Set MCP_TLS_CERT_FILE and MCP_TLS_KEY_FILE in your environment variables", host)
 		}
-		logger.Warnf("TLS is disabled on StreamableHTTP server; this is not recommended for production")
+		logger.Warnf("TLS is disabled on StreamableHTTP server. This is not recommended for production")
 	}
 
 	// Start server in goroutine
