@@ -1,6 +1,6 @@
 module github.com/hashicorp/consul-mcp-server
 
-go 1.24.0
+go 1.25.8
 
 require (
 	github.com/hashicorp/consul/api v1.32.1
