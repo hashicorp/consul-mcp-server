@@ -1,6 +1,6 @@
 module github.com/hashicorp/consul-mcp-server
 
-go 1.24
+go 1.25.8
 
 require (
 	github.com/hashicorp/consul/api v1.32.1
@@ -8,9 +8,10 @@ require (
 	github.com/hashicorp/go-retryablehttp v0.7.8
 	github.com/mark3labs/mcp-go v0.43.2
 	github.com/sirupsen/logrus v1.9.4
-	github.com/spf13/cobra v1.10.1
+	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.11.1
+	golang.org/x/time v0.14.0
 )
 
 require (
