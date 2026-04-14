@@ -302,7 +302,7 @@ Thank you for your interest in contributing! Please refer to [CONTRIBUTING.md](h
 
 ## License
 
-This project is licensed under the terms of the MPL-2.0 open source license. Please refer to [LICENSE](./LICENSE) file for the full terms.
+This project is licensed under the terms of the Business Source License 1.1. Please refer to the [LICENSE](./LICENSE) file for the full terms.
 
 ## Security
 

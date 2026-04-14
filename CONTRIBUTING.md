@@ -15,7 +15,7 @@ Please [open an issue](https://github.com/hashicorp/consul-mcp-server/issues) fo
 
 ## License
 
-By contributing, you agree your work will be licensed under the [MPL 2.0 License](LICENSE).
+By contributing, you agree your work will be licensed under the [Business Source License 1.1](LICENSE).
 
 ---
 
