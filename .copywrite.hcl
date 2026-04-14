@@ -1,7 +1,7 @@
 schema_version = 1
 
 project {
-  license        = "MPL-2.0"
+  license        = "BUSL-1.1"
   copyright_year = 2025
 
   # (OPTIONAL) A list of globs that should not have copyright/license headers.

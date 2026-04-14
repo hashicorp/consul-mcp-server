@@ -1,6 +1,6 @@
 // filepath: /Users/srahul3/git/consul-mcp-server/pkg/tools/functions/discovery-chain_test.go
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package functions
 
