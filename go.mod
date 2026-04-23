@@ -1,9 +1,9 @@
 module github.com/hashicorp/consul-mcp-server
 
-go 1.25.8
+go 1.26
 
 require (
-	github.com/hashicorp/consul/api v1.33.7
+	github.com/hashicorp/consul/api v1.34.2
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-retryablehttp v0.7.8
 	github.com/mark3labs/mcp-go v0.46.0
