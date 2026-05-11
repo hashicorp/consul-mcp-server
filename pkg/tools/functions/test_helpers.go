@@ -1,5 +1,5 @@
 // filepath: /Users/srahul3/git/consul-mcp-server/pkg/tools/functions/test_helpers.go
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2025, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package functions
