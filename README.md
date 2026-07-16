@@ -4,6 +4,10 @@ The Consul MCP Server is a [Model Context Protocol (MCP)](https://modelcontextpr
 server that provides seamless integration with HashiCorp Consul APIs, enabling advanced
 automation and interaction capabilities for service discovery, configuration management, and service mesh operations.
 
+> **Security Note:** At this stage, the MCP server is intended for local use only. The MCP server should only be deployed in trusted networks with trusted clients. If using the StreamableHTTP transport, always configure the `MCP_ALLOWED_ORIGINS` environment variable to restrict access to trusted browser origins only. This helps prevent DNS rebinding attacks and other cross-origin browser attacks. `MCP_ALLOWED_ORIGINS` is a CORS protection and *not* a network connection allowlist.
+
+> **Caution:** The outputs and recommendations provided by the MCP server are generated dynamically and may vary based on the query, model, and the connected MCP server. Users should **thoroughly review all outputs/recommendations** to ensure they align with their organization's **security best practices**, **compliance requirements**, and **Consul deployment policies** before implementation.
+
 ## Features
 
 - **Dual Transport Support**: Both Stdio and StreamableHTTP transports
@@ -14,10 +18,6 @@ automation and interaction capabilities for service discovery, configuration man
 - **Agent Operations**: Monitor and configure Consul agents, including health checks and services
 - **Cluster Operations**: Access operator tools for cluster management, autopilot, and Raft operations
 - **Container Ready**: Docker support for easy deployment
-
-> **Caution:** The outputs and recommendations provided by the MCP server are generated dynamically and may vary based on the query, model, and the connected MCP server. Users should **thoroughly review all outputs/recommendations** to ensure they align with their organization's **security best practices**, **compliance requirements**, and **Consul deployment policies** before implementation.
-
-> **Security Note:** When using the StreamableHTTP transport in production, always configure the `MCP_ALLOWED_ORIGINS` environment variable to restrict access to trusted origins only. This helps prevent DNS rebinding attacks and other cross-origin vulnerabilities.
 
 ## Prerequisites
 
@@ -116,7 +116,7 @@ curl -LO https://releases.hashicorp.com/consul-mcp-server/0.1.1/consul-mcp-serve
 # common step to start the server
 export CONSUL_HTTP_ADDR=<consul addr>
 export CONSUL_HTTP_TOKEN=<consul double default acl token with read privilege>
-./consul-mcp-server streamable-http --transport-port <8080 default> --transport-host 0.0.0.0
+./consul-mcp-server streamable-http --transport-port <8080 default> --transport-host 127.0.0.1
 
 
 # Stdio mode
