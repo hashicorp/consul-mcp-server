@@ -90,6 +90,8 @@ type RateLimitMiddleware struct {
 	logger          *log.Logger
 }
 
+const anonymousRateLimitKey = "__anonymous__"
+
 // NewRateLimitMiddleware creates a new rate limiting middleware
 func NewRateLimitMiddleware(config RateLimitConfig, logger *log.Logger) *RateLimitMiddleware {
 	return &RateLimitMiddleware{
@@ -135,13 +137,12 @@ func (m *RateLimitMiddleware) Middleware() server.ToolHandlerMiddleware {
 				return nil, errors.New("rate limit exceeded: too many requests globally")
 			}
 
-			// Check per-session rate limit if we can get session ID from context
-			if sessionID := getSessionIDFromContext(ctx); sessionID != "" {
-				sessionLimiter := m.getSessionLimiter(sessionID)
-				if !sessionLimiter.Allow() {
-					m.logger.Warnf("Session rate limit exceeded for session: %s, tool: %s", sessionID, toolName)
-					return nil, errors.New("rate limit exceeded: too many requests from this session")
-				}
+			// Apply the per-session budget to a trusted server session, or to a
+			// shared anonymous bucket when there is no trusted session.
+			sessionLimiter := m.getSessionLimiter(getRateLimitKeyFromContext(ctx))
+			if !sessionLimiter.Allow() {
+				m.logger.Warnf("Session rate limit exceeded for tool: %s", toolName)
+				return nil, errors.New("rate limit exceeded: too many requests from this session")
 			}
 
 			m.logger.Debugf("Rate limit check passed for tool: %s", toolName)
@@ -150,14 +151,32 @@ func (m *RateLimitMiddleware) Middleware() server.ToolHandlerMiddleware {
 	}
 }
 
-// getSessionIDFromContext extracts session ID from context
-// This is a helper function that tries to get session ID from the context
-func getSessionIDFromContext(ctx context.Context) string {
+// getRateLimitKeyFromContext extracts a trusted rate-limit bucket from context.
+func getRateLimitKeyFromContext(ctx context.Context) string {
+	if IsStatelessRequest(ctx) {
+		return anonymousRateLimitKey
+	}
+
 	// Try to get session from context
 	if session := server.ClientSessionFromContext(ctx); session != nil {
-		return session.SessionID()
+		if sessionID := session.SessionID(); sessionID != "" {
+			return sessionID
+		}
 	}
-	return ""
+	return anonymousRateLimitKey
+}
+
+// DeleteSession removes the limiter for a session when that session ends.
+func (m *RateLimitMiddleware) DeleteSession(sessionID string) {
+	if sessionID == "" {
+		return
+	}
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	delete(m.sessionLimiters, sessionID)
+	m.logger.Debug("Cleaned up rate limiter for inactive session")
 }
 
 // CleanupSessions removes inactive session limiters to prevent memory leaks
@@ -173,7 +192,7 @@ func (m *RateLimitMiddleware) CleanupSessions(activeSessions []string) {
 	for sessionID := range m.sessionLimiters {
 		if !activeSet[sessionID] {
 			delete(m.sessionLimiters, sessionID)
-			m.logger.Debugf("Cleaned up rate limiter for inactive session: %s", sessionID)
+			m.logger.Debug("Cleaned up rate limiter for inactive session")
 		}
 	}
 }

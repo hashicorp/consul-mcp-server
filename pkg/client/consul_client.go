@@ -27,9 +27,10 @@ const (
 )
 
 type ConsulHttpClient struct {
-	SessionID string
-	Address   string
-	Token     string
+	SessionID     string
+	Address       string
+	Token         string
+	SkipTLSVerify bool
 	// Add other Consul-specific fields as needed
 
 	client *http.Client
@@ -42,7 +43,7 @@ var (
 
 // NewConsulClientFromContext creates a new Consul client from the given context
 func NewConsulClientFromContext(ctx context.Context, logger *log.Logger) (*ConsulHttpClient, error) {
-	sessionId, ok := ctx.Value("session_id").(string)
+	sessionId, ok := contextStringValue(ctx, contextKeySessionID)
 	if !ok || sessionId == "" {
 		return nil, fmt.Errorf("session_id not found in context")
 	}
@@ -56,6 +57,10 @@ func DeleteConsulHttpClientForSession(sessionId string) {
 
 // NewConsulClient creates a new Consul client for the given session
 func NewConsulClient(ctx context.Context, sessionId string, logger *log.Logger) *ConsulHttpClient {
+	return newConsulClient(ctx, sessionId, logger, true)
+}
+
+func newConsulClient(ctx context.Context, sessionId string, logger *log.Logger, cacheClient bool) *ConsulHttpClient {
 	address := utils.GetEnv("CONSUL_HTTP_ADDR", "http://localhost:8500")
 	// Ensure the address does not have a trailing slash
 	if address[len(address)-1] == '/' {
@@ -64,26 +69,27 @@ func NewConsulClient(ctx context.Context, sessionId string, logger *log.Logger) 
 
 	token := utils.GetEnv("CONSUL_HTTP_TOKEN", "")
 
-	// override the address and token from session context if available
-	if addr, ok := ctx.Value("consul_address").(string); ok && addr != "" {
-		address = addr
-	}
-
-	if tkn, ok := ctx.Value("consul_token").(string); ok && tkn != "" {
+	// Override the token from request context if available. The Consul address
+	// is intentionally only read from CONSUL_HTTP_ADDR.
+	if tkn, ok := contextStringValue(ctx, contextKeyConsulToken); ok && tkn != "" {
 		token = tkn
 	}
 
-	httpClient := createHTTPClient(parseSkipTLSVerify(ctx), logger)
+	skipTLSVerify := parseSkipTLSVerify(ctx)
+	httpClient := createHTTPClient(skipTLSVerify, logger)
 
 	consulClient := &ConsulHttpClient{
-		SessionID: sessionId,
-		Address:   address,
-		Token:     token,
-		client:    httpClient,
-		Logger:    logger,
+		SessionID:     sessionId,
+		Address:       address,
+		Token:         token,
+		SkipTLSVerify: skipTLSVerify,
+		client:        httpClient,
+		Logger:        logger,
 	}
 
-	activeHttpClients.Store(sessionId, consulClient)
+	if cacheClient && shouldCacheConsulClient(ctx, sessionId) {
+		activeHttpClients.Store(sessionId, consulClient)
+	}
 
 	return consulClient
 }
@@ -96,21 +102,47 @@ func GetConsulHttpClient(sessionId string) *ConsulHttpClient {
 	return nil
 }
 
-// GetHttpClientFromContext extracts HTTP client from the MCP context
+// GetGetConsulHttpClientFromContext extracts HTTP client from the MCP context
 func GetGetConsulHttpClientFromContext(ctx context.Context, logger *log.Logger) (*ConsulHttpClient, error) {
 	session := server.ClientSessionFromContext(ctx)
 	if session == nil {
 		return nil, fmt.Errorf("no active session")
 	}
 
+	sessionID := session.SessionID()
+	if !shouldCacheConsulClient(ctx, sessionID) {
+		logger.Debug("Creating per-request Consul HTTP client")
+		return newConsulClient(ctx, sessionID, logger, false), nil
+	}
+
 	// Try to get existing client
-	client := GetConsulHttpClient(session.SessionID())
+	client := GetConsulHttpClient(sessionID)
 	if client != nil {
+		if consulClientNeedsRefresh(ctx, client) {
+			logger.Debug("Refreshing Consul HTTP client for MCP session")
+			return NewConsulClient(ctx, sessionID, logger), nil
+		}
 		return client, nil
 	}
 
-	logger.Warnf("HTTP client not found, creating a new one")
-	return NewConsulClient(ctx, session.SessionID(), logger), nil
+	logger.Warn("HTTP client not found, creating a new one")
+	return NewConsulClient(ctx, sessionID, logger), nil
+}
+
+func shouldCacheConsulClient(ctx context.Context, sessionID string) bool {
+	return sessionID != "" && !IsStatelessRequest(ctx)
+}
+
+func consulClientNeedsRefresh(ctx context.Context, client *ConsulHttpClient) bool {
+	if token, ok := contextStringValue(ctx, contextKeyConsulToken); ok && token != "" && token != client.Token {
+		return true
+	}
+
+	if _, ok := contextStringValue(ctx, contextKey(ConsulSkipTLSVerify)); ok && parseSkipTLSVerify(ctx) != client.SkipTLSVerify {
+		return true
+	}
+
+	return false
 }
 
 func (c *ConsulHttpClient) Put(path string, queryParams url.Values, data interface{}, callOptions ...string) ([]byte, error) {
@@ -264,7 +296,7 @@ func isEnterprise() bool {
 
 func parseSkipTLSVerify(ctx context.Context) bool {
 	// First check context for session-specific setting
-	skipTLSVerifyStr, ok := ctx.Value(contextKey(ConsulSkipTLSVerify)).(string)
+	skipTLSVerifyStr, ok := contextStringValue(ctx, contextKey(ConsulSkipTLSVerify))
 	if ok && skipTLSVerifyStr != "" {
 		skipTLSVerify, err := strconv.ParseBool(skipTLSVerifyStr)
 		if err == nil {
@@ -283,12 +315,9 @@ func parseSkipTLSVerify(ctx context.Context) bool {
 	return false
 }
 
-// NewHttpClient creates a http.Client with optional TLS verification skip
+// NewHttpClientFromContext creates a http.Client with optional TLS verification skip
 func NewHttpClientFromContext(ctx context.Context, logger *log.Logger) *http.Client {
 	client := createHTTPClient(true, logger)
-	sessionId, ok := ctx.Value("session_id").(string)
-	if !ok || sessionId == "" {
-		logger.WithField("session_id", sessionId).Info("Created HTTP client")
-	}
+	logger.Debug("Created HTTP client")
 	return client
 }

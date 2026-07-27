@@ -1,3 +1,7 @@
+## 0.1.4 (Jul 27, 2026)
+
+- Harden session isolation and stateless mode handling
+
 ## 0.1.3 (Sep 26, 2025)
 
 FEATURES

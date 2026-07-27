@@ -202,6 +202,7 @@ func streamableHTTPServerInit(ctx context.Context, hcServer *server.MCPServer, l
 		opts = append(opts, server.WithStateLess(true))
 		logger.Infof("Running in stateless mode")
 	} else {
+		opts = append(opts, server.WithStateful(true))
 		logger.Infof("Running in stateful mode (default)")
 	}
 
@@ -228,7 +229,7 @@ func streamableHTTPServerInit(ctx context.Context, hcServer *server.MCPServer, l
 	mux := http.NewServeMux()
 
 	// Apply middleware
-	streamableServer = client.ConsulContextMiddleware(logger)(streamableServer)
+	streamableServer = client.ConsulContextMiddleware(logger, isStateless)(streamableServer)
 
 	// Handle the /mcp endpoint with the streamable server (with security wrapper)
 	mux.Handle(endpointPath, streamableServer)

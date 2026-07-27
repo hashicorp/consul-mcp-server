@@ -12,6 +12,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/mark3labs/mcp-go/server"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -82,20 +84,41 @@ func TestNewConsulClient(t *testing.T) {
 	// Test that client is stored in activeHttpClients
 	storedClient := GetConsulHttpClient(sessionId)
 	assert.Equal(t, client, storedClient)
+	DeleteConsulHttpClientForSession(sessionId)
 }
 
-func TestNewConsulClientWithContextOverrides(t *testing.T) {
+func TestNewConsulClientDoesNotCacheBlankSession(t *testing.T) {
+	activeHttpClients.Clear()
+
+	client := NewConsulClient(context.Background(), "", logrus.New())
+
+	assert.NotNil(t, client)
+	assert.Nil(t, GetConsulHttpClient(""))
+}
+
+func TestNewConsulClientDoesNotCacheStatelessSession(t *testing.T) {
+	activeHttpClients.Clear()
+
+	ctx := context.WithValue(context.Background(), contextKeyMCPStateless, true)
+	client := NewConsulClient(ctx, "test-session-stateless", logrus.New())
+
+	assert.NotNil(t, client)
+	assert.Nil(t, GetConsulHttpClient("test-session-stateless"))
+}
+
+func TestNewConsulClientIgnoresContextAddressOverride(t *testing.T) {
 	// Set environment variables
 	os.Setenv("CONSUL_HTTP_ADDR", "http://env.consul:8500")
 	defer os.Unsetenv("CONSUL_HTTP_ADDR")
 
-	// Create context with overrides
+	// Create context with an address override that must be ignored.
 	ctx := context.WithValue(context.Background(), "consul_address", "http://ctx.consul:8500")
 	sessionId := "test-session-ctx"
 
 	client := NewConsulClient(ctx, sessionId, logrus.New())
 
-	assert.Equal(t, "http://ctx.consul:8500", client.Address)
+	assert.Equal(t, "http://env.consul:8500", client.Address)
+	DeleteConsulHttpClientForSession(sessionId)
 }
 
 func TestConsulClientHTTPMethods(t *testing.T) {
@@ -174,7 +197,68 @@ func TestGetGetConsulHttpClientFromContext(t *testing.T) {
 	})
 }
 
-type clientSessionKey struct{}
+type testClientSession struct {
+	id string
+}
+
+func (s testClientSession) Initialize() {}
+
+func (s testClientSession) Initialized() bool {
+	return true
+}
+
+func (s testClientSession) NotificationChannel() chan<- mcp.JSONRPCNotification {
+	return make(chan mcp.JSONRPCNotification)
+}
+
+func (s testClientSession) SessionID() string {
+	return s.id
+}
+
+func contextWithTestSession(ctx context.Context, sessionID string) context.Context {
+	mcpServer := server.NewMCPServer("test", "test")
+	return mcpServer.WithContext(ctx, testClientSession{id: sessionID})
+}
+
+func TestGetConsulHttpClientFromContextDoesNotReuseStatelessClient(t *testing.T) {
+	activeHttpClients.Clear()
+
+	baseCtx := context.WithValue(context.Background(), contextKeyMCPStateless, true)
+	firstCtx := context.WithValue(baseCtx, contextKeyConsulToken, "first-token")
+	firstCtx = contextWithTestSession(firstCtx, "")
+	firstClient, err := GetGetConsulHttpClientFromContext(firstCtx, logrus.New())
+	require.NoError(t, err)
+
+	secondCtx := context.WithValue(baseCtx, contextKeyConsulToken, "second-token")
+	secondCtx = contextWithTestSession(secondCtx, "")
+	secondClient, err := GetGetConsulHttpClientFromContext(secondCtx, logrus.New())
+	require.NoError(t, err)
+
+	assert.Equal(t, "first-token", firstClient.Token)
+	assert.Equal(t, "second-token", secondClient.Token)
+	assert.Nil(t, GetConsulHttpClient(""))
+}
+
+func TestGetConsulHttpClientFromContextRefreshesCachedClientWhenTokenChanges(t *testing.T) {
+	activeHttpClients.Clear()
+	sessionID := "refresh-token-session"
+
+	firstCtx := context.WithValue(context.Background(), contextKeyConsulToken, "old-token")
+	firstCtx = contextWithTestSession(firstCtx, sessionID)
+	firstClient, err := GetGetConsulHttpClientFromContext(firstCtx, logrus.New())
+	require.NoError(t, err)
+
+	secondCtx := context.WithValue(context.Background(), contextKeyConsulToken, "new-token")
+	secondCtx = contextWithTestSession(secondCtx, sessionID)
+	secondClient, err := GetGetConsulHttpClientFromContext(secondCtx, logrus.New())
+	require.NoError(t, err)
+
+	assert.Equal(t, "old-token", firstClient.Token)
+	assert.Equal(t, "new-token", secondClient.Token)
+	assert.Equal(t, secondClient, GetConsulHttpClient(sessionID))
+
+	DeleteConsulHttpClientForSession(sessionID)
+}
 
 func TestDeleteConsulHttpClientForSession(t *testing.T) {
 	sessionId := "delete-test-session"

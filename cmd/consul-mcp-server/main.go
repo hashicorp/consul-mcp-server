@@ -60,6 +60,7 @@ func NewServer(version string, logger *log.Logger, opts ...server.ServerOption) 
 	})
 	hooks.AddOnUnregisterSession(func(ctx context.Context, session server.ClientSession) {
 		client.EndSessionHandler(ctx, session, logger)
+		rateLimitMiddleware.DeleteSession(session.SessionID())
 	})
 
 	// Add hooks to options
