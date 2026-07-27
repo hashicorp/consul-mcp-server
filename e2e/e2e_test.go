@@ -176,6 +176,7 @@ func startHTTPContainer(t *testing.T, port string) string {
 		"-e", "TRANSPORT_HOST=0.0.0.0",
 		"-e", "MCP_SESSION_MODE=stateful",
 		"-e", "CONSUL_MCP_SERVER_READ_GITHUB_RESOURCES=false",
+		"-e", "INSECURE_NO_TLS=true",
 		"-p", portMapping,
 		"consul-mcp-server:test-e2e",
 	)

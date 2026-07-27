@@ -20,14 +20,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func runHTTPServer(logger *log.Logger, host string, port string, endpointPath string) error {
+func runHTTPServer(logger *log.Logger, host string, port string, endpointPath string, insecureNoTLS bool) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
 	hcServer := NewServer(version.Version, logger)
 	registerToolsAndResources(hcServer, logger)
 
-	return streamableHTTPServerInit(ctx, hcServer, logger, host, port, endpointPath)
+	return streamableHTTPServerInit(ctx, hcServer, logger, host, port, endpointPath, insecureNoTLS)
 }
 
 func runStdioServer(logger *log.Logger) error {
@@ -105,7 +105,8 @@ func main() {
 			stdlog.Fatal("Failed to initialize logger:", err)
 		}
 
-		if err := runHTTPServer(logger, host, port, endpointPath); err != nil {
+		insecureNoTLS := strings.ToLower(os.Getenv("INSECURE_NO_TLS")) == "true"
+		if err := runHTTPServer(logger, host, port, endpointPath, insecureNoTLS); err != nil {
 			stdlog.Fatal("failed to run StreamableHTTP server:", err)
 		}
 		return

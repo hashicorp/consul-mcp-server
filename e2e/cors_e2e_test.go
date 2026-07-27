@@ -96,6 +96,7 @@ func startHTTPContainerWithCORS(t *testing.T, port, mode, origins string) string
 		"-e", "TRANSPORT_HOST=0.0.0.0",
 		"-e", "MCP_SESSION_MODE=stateful",
 		"-e", "CONSUL_MCP_SERVER_READ_GITHUB_RESOURCES=false",
+		"-e", "INSECURE_NO_TLS=true",
 		"-e", fmt.Sprintf("MCP_CORS_MODE=%s", mode),
 		"-e", fmt.Sprintf("MCP_ALLOWED_ORIGINS=%s", origins),
 		"-p", portMapping,

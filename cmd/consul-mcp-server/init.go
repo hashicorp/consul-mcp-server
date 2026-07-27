@@ -81,7 +81,12 @@ var (
 				stdlog.Fatal("Failed to get endpoint path:", err)
 			}
 
-			if err := runHTTPServer(logger, host, port, endpointPath); err != nil {
+			insecureNoTLS, err := cmd.Flags().GetBool("insecure-no-tls")
+			if err != nil {
+				stdlog.Fatal("Failed to get insecure-no-tls flag:", err)
+			}
+
+			if err := runHTTPServer(logger, host, port, endpointPath, insecureNoTLS); err != nil {
 				stdlog.Fatal("failed to run streamableHTTP server:", err)
 			}
 		},
@@ -93,9 +98,38 @@ var (
 		Short:      "Start StreamableHTTP server (deprecated, use 'streamable-http' instead)",
 		Long:       `This command is deprecated. Please use 'streamable-http' instead.`,
 		Deprecated: "Use 'streamable-http' instead",
-		Run: func(cmd *cobra.Command, args []string) {
-			// Forward to the new command
-			streamableHTTPCmd.Run(cmd, args)
+		Run: func(cmd *cobra.Command, _ []string) {
+			logFile, err := rootCmd.PersistentFlags().GetString("log-file")
+			if err != nil {
+				stdlog.Fatal("Failed to get log file:", err)
+			}
+			logger, err := initLogger(logFile)
+			if err != nil {
+				stdlog.Fatal("Failed to initialize logger:", err)
+			}
+
+			port, err := cmd.Flags().GetString("transport-port")
+			if err != nil {
+				stdlog.Fatal("Failed to get streamableHTTP port:", err)
+			}
+			host, err := cmd.Flags().GetString("transport-host")
+			if err != nil {
+				stdlog.Fatal("Failed to get streamableHTTP host:", err)
+			}
+
+			endpointPath, err := cmd.Flags().GetString("mcp-endpoint")
+			if err != nil {
+				stdlog.Fatal("Failed to get endpoint path:", err)
+			}
+
+			insecureNoTLS, err := cmd.Flags().GetBool("insecure-no-tls")
+			if err != nil {
+				stdlog.Fatal("Failed to get insecure-no-tls flag:", err)
+			}
+
+			if err := runHTTPServer(logger, host, port, endpointPath, insecureNoTLS); err != nil {
+				stdlog.Fatal("failed to run streamableHTTP server:", err)
+			}
 		},
 	}
 )
@@ -109,11 +143,13 @@ func init() {
 	streamableHTTPCmd.Flags().String("transport-host", "127.0.0.1", "Host to bind to")
 	streamableHTTPCmd.Flags().StringP("transport-port", "p", "8080", "Port to listen on")
 	streamableHTTPCmd.Flags().String("mcp-endpoint", "/mcp", "Path for streamable HTTP endpoint")
+	streamableHTTPCmd.Flags().Bool("insecure-no-tls", false, "Allow the server to start without TLS. Not recommended for production use.")
 
 	// Add the same flags to the alias command for backward compatibility
 	httpCmdAlias.Flags().String("transport-host", "127.0.0.1", "Host to bind to")
 	httpCmdAlias.Flags().StringP("transport-port", "p", "8080", "Port to listen on")
 	httpCmdAlias.Flags().String("mcp-endpoint", "/mcp", "Path for streamable HTTP endpoint")
+	httpCmdAlias.Flags().Bool("insecure-no-tls", false, "Allow the server to start without TLS. Not recommended for production use.")
 
 	rootCmd.AddCommand(stdioCmd)
 	rootCmd.AddCommand(streamableHTTPCmd)
@@ -174,7 +210,7 @@ func serverInit(ctx context.Context, hcServer *server.MCPServer, logger *log.Log
 	return nil
 }
 
-func streamableHTTPServerInit(ctx context.Context, hcServer *server.MCPServer, logger *log.Logger, host string, port string, endpointPath string) error {
+func streamableHTTPServerInit(ctx context.Context, hcServer *server.MCPServer, logger *log.Logger, host string, port string, endpointPath string, insecureNoTLS bool) error {
 	// Check if stateless mode is enabled
 	isStateless := shouldUseStatelessMode()
 
@@ -257,10 +293,10 @@ func streamableHTTPServerInit(ctx context.Context, hcServer *server.MCPServer, l
 		httpServer.TLSConfig = tlsConfig.Config
 		logger.Infof("TLS enabled with certificate: %s", tlsConfig.CertFile)
 	} else {
-		if !client.IsLocalHost(host) {
-			return fmt.Errorf("TLS is required for non-localhost binding (%s). Set MCP_TLS_CERT_FILE and MCP_TLS_KEY_FILE in your environment variables", host)
+		if !insecureNoTLS {
+			return fmt.Errorf("TLS is required for the StreamableHTTP server. Set MCP_TLS_CERT_FILE and MCP_TLS_KEY_FILE, or pass --insecure-no-tls to explicitly opt out")
 		}
-		logger.Warnf("TLS is disabled on StreamableHTTP server. This is not recommended for production")
+		logger.Warnf("TLS is disabled on StreamableHTTP server (--insecure-no-tls). This is not recommended for production")
 	}
 
 	// Start server in goroutine

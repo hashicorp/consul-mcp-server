@@ -51,6 +51,7 @@ Modern HTTP-based transport supporting both direct HTTP requests and Server-Sent
 | `MCP_SESSION_MODE` | Session mode: `stateful` or `stateless`                                                                                                       | `stateful`              |
 | `MCP_ALLOWED_ORIGINS` | Comma-separated list of allowed origins for CORS                                                                                              | `""` (empty)            |
 | `MCP_CORS_MODE` | CORS mode: `strict`, `development`, or `disabled`                                                                                             | `strict`                |
+| `INSECURE_NO_TLS` | Allow the StreamableHTTP server to start without TLS. Set to `true` only for local development or testing. See [TLS Configuration](#tls-configuration). | `false`         |
 | `CONSUL_HTTP_ADDR` | Consul agent HTTP API address                                                                                                                 | `http://127.0.0.1:8500` |
 | `CONSUL_HTTP_TOKEN` | Consul ACL token for authentication                                                                                                           | `""` (empty)            |
 | `CONSUL_SKIP_VERIFY` | Skip TLS certificate verification (use only for development/testing)                                                                          | `false`                 |
@@ -59,9 +60,58 @@ Modern HTTP-based transport supporting both direct HTTP requests and Server-Sent
 
 ## TLS Configuration
 
-The Consul MCP Server supports secure connections to Consul clusters with proper TLS configuration. Here are the key settings:
+The Consul MCP Server has two distinct TLS concerns:
 
-### Certificate Verification
+1. **Server TLS** — the certificate the MCP server presents to MCP clients over the StreamableHTTP transport.
+2. **Client TLS** — the certificate verification the MCP server performs when it connects to a Consul HTTPS endpoint.
+
+### Server TLS (StreamableHTTP transport)
+
+When using the StreamableHTTP transport the server **requires TLS by default**. You must supply a certificate and key via environment variables:
+
+| Variable | Description |
+|----------|-------------|
+| `MCP_TLS_CERT_FILE` | Path to the PEM-encoded TLS certificate file |
+| `MCP_TLS_KEY_FILE` | Path to the PEM-encoded TLS private key file |
+
+```bash
+export MCP_TLS_CERT_FILE=/path/to/server.crt
+export MCP_TLS_KEY_FILE=/path/to/server.key
+./consul-mcp-server streamable-http --transport-host 0.0.0.0 --transport-port 8080
+```
+
+#### Opting out of server TLS (development/testing only)
+
+**⚠️ Security Warning**: Only disable server TLS in local development or testing environments. Never use this in production.
+
+If you do not have TLS certificates available, you can explicitly opt out using the `--insecure-no-tls` CLI flag or the `INSECURE_NO_TLS=true` environment variable. This applies uniformly regardless of the bind host — there is no implicit exemption for localhost or `0.0.0.0`.
+
+**CLI flag:**
+```bash
+./consul-mcp-server streamable-http \
+  --transport-host 127.0.0.1 --transport-port 8080 \
+  --insecure-no-tls
+```
+
+**Environment variable (container / env-driven deployments):**
+```bash
+export INSECURE_NO_TLS=true
+export TRANSPORT_HOST=0.0.0.0
+export TRANSPORT_PORT=8080
+./consul-mcp-server
+```
+
+**Docker example:**
+```bash
+docker run -i --rm \
+  -e TRANSPORT_MODE=streamable-http \
+  -e TRANSPORT_HOST=0.0.0.0 \
+  -e INSECURE_NO_TLS=true \
+  -p 8080:8080 \
+  hashicorp/consul-mcp-server
+```
+
+### Client TLS (connections to Consul)
 
 By default, the MCP server verifies TLS certificates when connecting to HTTPS Consul endpoints. If your Consul cluster uses self-signed certificates or certificates that cannot be verified against the system's certificate store, you may encounter errors like:
 
@@ -69,7 +119,7 @@ By default, the MCP server verifies TLS certificates when connecting to HTTPS Co
 tls: failed to verify certificate: x509: "________" certificate is not trusted
 ```
 
-### Disabling Certificate Verification (Development/Testing Only)
+#### Disabling certificate verification (development/testing only)
 
 **⚠️ Security Warning**: Only disable certificate verification in development or testing environments. Never use this in production.
 
@@ -122,8 +172,12 @@ export CONSUL_HTTP_TOKEN=<consul double default acl token with read privilege>
 # Stdio mode
 consul-mcp-server stdio [--log-file /path/to/log]
 
-# StreamableHTTP mode
-consul-mcp-server streamable-http [--transport-port 8080] [--transport-host 127.0.0.1] [--mcp-endpoint /mcp] [--log-file /path/to/log]
+# StreamableHTTP mode (with TLS)
+consul-mcp-server streamable-http [--transport-port 8080] [--transport-host 0.0.0.0] [--mcp-endpoint /mcp] [--log-file /path/to/log]
+# MCP_TLS_CERT_FILE and MCP_TLS_KEY_FILE must be set in the environment.
+
+# StreamableHTTP mode (without TLS — development/testing only)
+consul-mcp-server streamable-http [--transport-port 8080] [--transport-host 127.0.0.1] [--mcp-endpoint /mcp] --insecure-no-tls
 ```
 
 ## Session Modes

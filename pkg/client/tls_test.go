@@ -240,28 +240,3 @@ func TestTLSConfigCipherSuites(t *testing.T) {
 	require.Equal(t, expectedCurves, tlsConfig.Config.CurvePreferences)
 }
 
-func TestIsLocalHost(t *testing.T) {
-	tests := []struct {
-		host     string
-		expected bool
-	}{
-		{"localhost", true},
-		{"127.0.0.1", true},
-		{"::1", true},
-		{"[::1]", true},
-		{"0.0.0.0", true},
-		{"LOCALHOST", true},
-		{"Localhost", true},
-		{"example.com", false},
-		{"192.168.1.1", false},
-		{"10.0.0.1", false},
-		{"my-server.internal", false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.host, func(t *testing.T) {
-			result := IsLocalHost(tt.host)
-			require.Equal(t, tt.expected, result)
-		})
-	}
-}

@@ -1,6 +1,8 @@
 ## 0.1.4 (Jul 27, 2026)
 
+FEATURES
 - Harden session isolation and stateless mode handling
+- Replace incomplete localhost-based TLS bypass with explicit `--insecure-no-tls` flag. The StreamableHTTP server now requires TLS by default for all bind addresses. Users can opt out by passing `--insecure-no-tls` (CLI) or setting `INSECURE_NO_TLS=true` (env var) for development and testing environments only.
 
 ## 0.1.3 (Sep 26, 2025)
 
