@@ -7,7 +7,6 @@ import (
 	"crypto/tls"
 	"fmt"
 	"os"
-	"strings"
 )
 
 // TLSConfig holds TLS certificate configuration for the MCP server's HTTP listener.
@@ -77,12 +76,3 @@ func GetTLSConfigFromEnv() (*TLSConfig, error) {
 	}, nil
 }
 
-// IsLocalHost checks if the given host is a localhost address.
-func IsLocalHost(host string) bool {
-	h := strings.ToLower(host)
-	return h == "localhost" ||
-		h == "127.0.0.1" ||
-		h == "::1" ||
-		h == "[::1]" ||
-		h == "0.0.0.0"
-}
