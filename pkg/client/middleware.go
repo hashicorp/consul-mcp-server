@@ -6,10 +6,10 @@ package client
 import (
 	"context"
 	"net/http"
-	"net/textproto"
 	"os"
 	"strings"
 
+	"github.com/mark3labs/mcp-go/server"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -123,32 +123,33 @@ func NewSecurityHandler(handler http.Handler, allowedOrigins []string, corsMode 
 	}
 }
 
-// ConsulContextMiddleware is a middleware that extracts Consul connection details from the request headers
-// and adds them to the request context. This allows the application to have a single, unified way of
-// accessing Consul connection details regardless of the transport.
-func ConsulContextMiddleware(logger *log.Logger) func(http.Handler) http.Handler {
+// ConsulContextMiddleware extracts request-scoped Consul credentials from
+// headers. The Consul address is intentionally configured only through
+// CONSUL_HTTP_ADDR so clients cannot redirect server-side traffic per request.
+func ConsulContextMiddleware(logger *log.Logger, statelessMode ...bool) func(http.Handler) http.Handler {
+	isStateless := len(statelessMode) > 0 && statelessMode[0]
+
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
+			ctx = context.WithValue(ctx, contextKeyMCPStateless, isStateless)
 
 			// Extract session ID from header
-			sessionID := r.Header.Get(textproto.CanonicalMIMEHeaderKey("x-mcp-session-id"))
-			if sessionID != "" {
-				ctx = context.WithValue(ctx, "session_id", sessionID)
-				logger.Debugf("session_id: %s", sessionID)
-			}
-
-			// Extract Consul address from header
-			consulAddr := r.Header.Get(textproto.CanonicalMIMEHeaderKey("X-Consul-Address"))
-			if consulAddr != "" {
-				ctx = context.WithValue(ctx, "consul_address", consulAddr)
-				logger.Debugf("consul_address: %s", consulAddr)
+			sessionID := r.Header.Get(server.HeaderKeySessionID)
+			if isStateless {
+				if sessionID != "" {
+					logger.Debug("Ignoring MCP session ID header in stateless mode")
+				}
+				r.Header.Del(server.HeaderKeySessionID)
+			} else if sessionID != "" {
+				ctx = context.WithValue(ctx, contextKeySessionID, sessionID)
+				logger.Debug("Received MCP session ID header")
 			}
 
 			// Extract Consul token from header
-			consulToken := r.Header.Get(textproto.CanonicalMIMEHeaderKey("X-Consul-Token"))
+			consulToken := r.Header.Get("X-Consul-Token")
 			if consulToken != "" {
-				ctx = context.WithValue(ctx, "consul_token", consulToken)
+				ctx = context.WithValue(ctx, contextKeyConsulToken, consulToken)
 			}
 
 			next.ServeHTTP(w, r.WithContext(ctx))

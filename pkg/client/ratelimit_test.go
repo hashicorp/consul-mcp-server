@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/mark3labs/mcp-go/server"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/time/rate"
 )
@@ -126,4 +127,73 @@ func TestLoadRateLimitConfigFromEnvWithCustomValues(t *testing.T) {
 	if config.PerSessionBurst != 16 {
 		t.Errorf("Expected session burst of 16, got %d", config.PerSessionBurst)
 	}
+}
+
+func TestRateLimitMiddlewareUsesSharedBucketForStatelessRequests(t *testing.T) {
+	logger := log.New()
+	logger.SetLevel(log.ErrorLevel)
+
+	config := RateLimitConfig{
+		GlobalLimit:     rate.Limit(100),
+		GlobalBurst:     100,
+		PerSessionLimit: rate.Every(time.Hour),
+		PerSessionBurst: 1,
+	}
+
+	middleware := NewRateLimitMiddleware(config, logger)
+	handler := middleware.Middleware()(func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		return mcp.NewToolResultText("success"), nil
+	})
+	request := mcp.CallToolRequest{Params: mcp.CallToolParams{Name: "test_tool"}}
+
+	firstCtx := context.WithValue(context.Background(), contextKeyMCPStateless, true)
+	firstCtx = contextWithRateLimitTestSession(firstCtx, "attacker-session-1")
+	secondCtx := context.WithValue(context.Background(), contextKeyMCPStateless, true)
+	secondCtx = contextWithRateLimitTestSession(secondCtx, "attacker-session-2")
+
+	if _, err := handler(firstCtx, request); err != nil {
+		t.Fatalf("first request should succeed, got error: %v", err)
+	}
+
+	if _, err := handler(secondCtx, request); err == nil {
+		t.Fatal("second stateless request should be rate limited despite a different session ID")
+	}
+}
+
+func TestRateLimitMiddlewareDeletesEndedSessionLimiter(t *testing.T) {
+	logger := log.New()
+	logger.SetLevel(log.ErrorLevel)
+
+	config := RateLimitConfig{
+		GlobalLimit:     rate.Limit(100),
+		GlobalBurst:     100,
+		PerSessionLimit: rate.Every(time.Hour),
+		PerSessionBurst: 1,
+	}
+
+	middleware := NewRateLimitMiddleware(config, logger)
+	handler := middleware.Middleware()(func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		return mcp.NewToolResultText("success"), nil
+	})
+	request := mcp.CallToolRequest{Params: mcp.CallToolParams{Name: "test_tool"}}
+	ctx := contextWithRateLimitTestSession(context.Background(), "ended-session")
+
+	if _, err := handler(ctx, request); err != nil {
+		t.Fatalf("first request should succeed, got error: %v", err)
+	}
+
+	if _, err := handler(ctx, request); err == nil {
+		t.Fatal("second request should be rate limited before cleanup")
+	}
+
+	middleware.DeleteSession("ended-session")
+
+	if _, err := handler(ctx, request); err != nil {
+		t.Fatalf("request should succeed after session limiter cleanup, got error: %v", err)
+	}
+}
+
+func contextWithRateLimitTestSession(ctx context.Context, sessionID string) context.Context {
+	mcpServer := server.NewMCPServer("test", "test")
+	return mcpServer.WithContext(ctx, testClientSession{id: sessionID})
 }
