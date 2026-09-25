@@ -1,3 +1,0 @@
-```release-note:security
-Upgrade Go toolchain to 1.26.8 (Go 1.25 reached end-of-life) and pin the Docker build image to `golang:1.26.8-alpine`.
-```
