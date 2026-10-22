@@ -6,9 +6,9 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/consul-mcp-server/pkg/resources"
 	"io"
 	stdlog "log"
+	"log/slog"
 	"net/http"
 	"os"
 	"path"
@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/consul-mcp-server/pkg/client"
+	"github.com/hashicorp/consul-mcp-server/pkg/resources"
 	"github.com/hashicorp/consul-mcp-server/pkg/tools"
 	"github.com/hashicorp/consul-mcp-server/version"
 	"github.com/mark3labs/mcp-go/server"
@@ -165,9 +166,20 @@ func initLogger(outPath string) (*log.Logger, error) {
 		return log.New(), nil
 	}
 
-	file, err := os.OpenFile(outPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	file, err := os.OpenFile(outPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open log file: %w", err)
+	}
+
+	// The creation mode does not change permissions on an existing file.
+	info, err := file.Stat()
+	if err != nil {
+		_ = file.Close()
+		return nil, fmt.Errorf("failed to inspect log file: %w", err)
+	}
+	if !info.Mode().IsRegular() || info.Mode().Perm()&0077 != 0 {
+		_ = file.Close()
+		return nil, fmt.Errorf("log file must be a regular file with owner-only permissions (0600)")
 	}
 
 	logger := log.New()
@@ -210,30 +222,18 @@ func serverInit(ctx context.Context, hcServer *server.MCPServer, logger *log.Log
 	return nil
 }
 
-func streamableHTTPServerInit(ctx context.Context, hcServer *server.MCPServer, logger *log.Logger, host string, port string, endpointPath string, insecureNoTLS bool) error {
-	// Check if stateless mode is enabled
-	isStateless := shouldUseStatelessMode()
-
-	// Ensure endpoint path starts with /
-	endpointPath = path.Join("/", endpointPath)
+func newStreamableHTTPHandler(hcServer *server.MCPServer, logger *log.Logger, endpointPath string, isStateless bool) http.Handler {
 	// Create StreamableHTTP server which implements the new streamable-http transport
 	// This is the modern MCP transport that supports both direct HTTP responses and SSE streams
 	opts := []server.StreamableHTTPOption{
 		server.WithEndpointPath(endpointPath), // Default MCP endpoint path
-		server.WithLogger(logger),
-	}
-
-	// Load TLS configuration
-	tlsConfig, err := client.GetTLSConfigFromEnv()
-	if err != nil {
-		return fmt.Errorf("TLS configuration error: %w", err)
+		server.WithStreamableHTTPLogger(slog.New(slog.NewTextHandler(logger.Out, nil))),
 	}
 
 	// Log the endpoint path being used
 	logger.Infof("Using endpoint path: %s", endpointPath)
 
 	// Only add the WithStateLess option if stateless mode is enabled
-	// TODO: fix this in mcp-go ver 0.33.0 or higher
 	if isStateless {
 		opts = append(opts, server.WithStateLess(true))
 		logger.Infof("Running in stateless mode")
@@ -259,25 +259,34 @@ func streamableHTTPServerInit(ctx context.Context, hcServer *server.MCPServer, l
 		logger.Warnf("CORS validation is disabled. This is not recommended for production.")
 	}
 
-	// Create a security wrapper around the streamable server
-	streamableServer := client.NewSecurityHandler(baseStreamableServer, corsConfig.AllowedOrigins, corsConfig.Mode, logger)
+	// Reject unauthorized origins before reading bodies, and enforce resource
+	// limits before mcp-go can buffer a POST body or execute a tool.
+	streamableServer := client.ConsulContextMiddleware(logger, isStateless)(baseStreamableServer)
+	streamableServer = limitMCPRequests(streamableServer)
+	streamableServer = client.NewSecurityHandler(streamableServer, corsConfig.AllowedOrigins, corsConfig.Mode, logger)
 
 	mux := http.NewServeMux()
-
-	// Apply middleware
-	streamableServer = client.ConsulContextMiddleware(logger, isStateless)(streamableServer)
-
 	// Handle the /mcp endpoint with the streamable server (with security wrapper)
 	mux.Handle(endpointPath, streamableServer)
-	mux.Handle(endpointPath+"/", streamableServer)
+	if endpointPath != "/" {
+		mux.Handle(endpointPath+"/", streamableServer)
+	}
 
 	// Add health check endpoint
-	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		response := fmt.Sprintf(`{"status":"ok","service":"consul-mcp-server","transport":"streamable-http","endpoint":"%s"}`, endpointPath)
-		w.Write([]byte(response))
-	})
+	mux.Handle("/health", healthHandler(endpointPath, logger))
+	return mux
+}
+
+func streamableHTTPServerInit(ctx context.Context, hcServer *server.MCPServer, logger *log.Logger, host string, port string, endpointPath string, insecureNoTLS bool) error {
+	isStateless := shouldUseStatelessMode()
+	endpointPath = path.Join("/", endpointPath)
+
+	tlsConfig, err := client.GetTLSConfigFromEnv()
+	if err != nil {
+		return fmt.Errorf("TLS configuration error: %w", err)
+	}
+
+	mux := newStreamableHTTPHandler(hcServer, logger, endpointPath, isStateless)
 
 	addr := fmt.Sprintf("%s:%s", host, port)
 	httpServer := &http.Server{
