@@ -1,3 +1,8 @@
+## 0.1.5 (Unreleased)
+
+SECURITY
+- Create the `--log-file` log with owner-only (`0600`) permissions instead of `0666`, so other local users can no longer read it.
+
 ## 0.1.4 (Jul 27, 2026)
 
 FEATURES
