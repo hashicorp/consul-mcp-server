@@ -30,12 +30,12 @@ func generateTestCertAndKey() (certPEM []byte, keyPEM []byte, err error) {
 	}
 
 	template := &x509.Certificate{
-		SerialNumber: big.NewInt(1),
-		Subject:      pkix.Name{CommonName: "test"},
-		NotBefore:    time.Now().Add(-1 * time.Hour),
-		NotAfter:     time.Now().Add(24 * time.Hour),
-		KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
-		IsCA:         true,
+		SerialNumber:          big.NewInt(1),
+		Subject:               pkix.Name{CommonName: "test"},
+		NotBefore:             time.Now().Add(-1 * time.Hour),
+		NotAfter:              time.Now().Add(24 * time.Hour),
+		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
+		IsCA:                  true,
 		BasicConstraintsValid: true,
 	}
 
@@ -239,4 +239,3 @@ func TestTLSConfigCipherSuites(t *testing.T) {
 	}
 	require.Equal(t, expectedCurves, tlsConfig.Config.CurvePreferences)
 }
-
