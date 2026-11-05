@@ -2,6 +2,7 @@
 
 SECURITY
 - Create the `--log-file` log with owner-only (`0600`) permissions instead of `0666`, so other local users can no longer read it.
+- Upgrade `github.com/mark3labs/mcp-go` to `v1.5.0` to fix CVE-2026-108859. StreamableHTTP POST request bodies are now capped at 4 MiB.
 
 ## 0.1.4 (Jul 27, 2026)
 

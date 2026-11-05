@@ -6,14 +6,16 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/consul-mcp-server/pkg/resources"
 	"io"
 	stdlog "log"
+	"log/slog"
 	"net/http"
 	"os"
 	"path"
 	"strings"
 	"time"
+
+	"github.com/hashicorp/consul-mcp-server/pkg/resources"
 
 	"github.com/hashicorp/consul-mcp-server/pkg/client"
 	"github.com/hashicorp/consul-mcp-server/pkg/tools"
@@ -220,7 +222,8 @@ func streamableHTTPServerInit(ctx context.Context, hcServer *server.MCPServer, l
 	// This is the modern MCP transport that supports both direct HTTP responses and SSE streams
 	opts := []server.StreamableHTTPOption{
 		server.WithEndpointPath(endpointPath), // Default MCP endpoint path
-		server.WithLogger(logger),
+		server.WithStreamableHTTPLogger(slog.New(slog.NewTextHandler(logger.Writer(), nil))),
+		server.WithMaxRequestBodyBytes(server.DefaultMaxRequestBodyBytes),
 	}
 
 	// Load TLS configuration
