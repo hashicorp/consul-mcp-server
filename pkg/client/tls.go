@@ -75,4 +75,3 @@ func GetTLSConfigFromEnv() (*TLSConfig, error) {
 		KeyFile:  keyFile,
 	}, nil
 }
-
