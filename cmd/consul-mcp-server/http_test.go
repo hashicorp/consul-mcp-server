@@ -17,9 +17,6 @@ import (
 
 const initializeRequest = `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"test","version":"1.0.0"}}}`
 
-// TODO: e2e tests only run the server in `stdio` mode (stdin/stdout), never `streamable-http` mode.
-// Add HTTP e2e tests against the real Docker image; these httptest-based tests do not cover TLS or the binary's flags/env.
-
 func newTestHTTPServer(t *testing.T) *httptest.Server {
 	t.Helper()
 	logger, _ := test.NewNullLogger()
