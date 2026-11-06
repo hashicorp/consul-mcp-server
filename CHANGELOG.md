@@ -3,6 +3,7 @@
 SECURITY
 - Create the `--log-file` log with owner-only (`0600`) permissions instead of `0666`, so other local users can no longer read it.
 - Upgrade `github.com/mark3labs/mcp-go` to `v1.5.0` to fix CVE-2026-108859. StreamableHTTP POST request bodies are now capped at 4 MiB.
+- StreamableHTTP requests arriving over loopback (`127.0.0.1`, `::1`) with a non-localhost `Host` header are now rejected with `403 Forbidden` (DNS rebinding protection from `mcp-go` v1). Reverse proxies on the same host must forward a localhost `Host` header.
 
 ## 0.1.4 (Jul 27, 2026)
 

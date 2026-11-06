@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	stdlog "log"
-	"log/slog"
 	"net/http"
 	"os"
 	"path"
@@ -213,23 +212,73 @@ func serverInit(ctx context.Context, hcServer *server.MCPServer, logger *log.Log
 }
 
 func streamableHTTPServerInit(ctx context.Context, hcServer *server.MCPServer, logger *log.Logger, host string, port string, endpointPath string, insecureNoTLS bool) error {
-	// Check if stateless mode is enabled
-	isStateless := shouldUseStatelessMode()
-
 	// Ensure endpoint path starts with /
 	endpointPath = path.Join("/", endpointPath)
-	// Create StreamableHTTP server which implements the new streamable-http transport
-	// This is the modern MCP transport that supports both direct HTTP responses and SSE streams
-	opts := []server.StreamableHTTPOption{
-		server.WithEndpointPath(endpointPath), // Default MCP endpoint path
-		server.WithStreamableHTTPLogger(slog.New(slog.NewTextHandler(logger.Writer(), nil))),
-		server.WithMaxRequestBodyBytes(server.DefaultMaxRequestBodyBytes),
-	}
 
 	// Load TLS configuration
 	tlsConfig, err := client.GetTLSConfigFromEnv()
 	if err != nil {
 		return fmt.Errorf("TLS configuration error: %w", err)
+	}
+
+	mux := newStreamableHTTPHandler(hcServer, logger, endpointPath, shouldUseStatelessMode())
+
+	addr := fmt.Sprintf("%s:%s", host, port)
+	httpServer := &http.Server{
+		Addr:              addr,
+		Handler:           mux,
+		ReadTimeout:       30 * time.Second,
+		ReadHeaderTimeout: 30 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       60 * time.Second,
+	}
+
+	if tlsConfig != nil {
+		httpServer.TLSConfig = tlsConfig.Config
+		logger.Infof("TLS enabled with certificate: %s", tlsConfig.CertFile)
+	} else {
+		if !insecureNoTLS {
+			return fmt.Errorf("TLS is required for the StreamableHTTP server. Set MCP_TLS_CERT_FILE and MCP_TLS_KEY_FILE, or pass --insecure-no-tls to explicitly opt out")
+		}
+		logger.Warnf("TLS is disabled on StreamableHTTP server (--insecure-no-tls). This is not recommended for production")
+	}
+
+	// Start server in goroutine
+	errC := make(chan error, 1)
+	go func() {
+		if tlsConfig != nil {
+			logger.Infof("Starting StreamableHTTP server with TLS on %s%s", addr, endpointPath)
+			errC <- httpServer.ListenAndServeTLS(tlsConfig.CertFile, tlsConfig.KeyFile)
+		} else {
+			logger.Infof("Starting StreamableHTTP server on %s%s", addr, endpointPath)
+			errC <- httpServer.ListenAndServe()
+		}
+	}()
+
+	// Wait for shutdown signal
+	select {
+	case <-ctx.Done():
+		logger.Infof("Shutting down StreamableHTTP server...")
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		return httpServer.Shutdown(shutdownCtx)
+	case err := <-errC:
+		if err != nil && err != http.ErrServerClosed {
+			return fmt.Errorf("StreamableHTTP server error: %w", err)
+		}
+	}
+
+	return nil
+}
+
+// newStreamableHTTPHandler builds the HTTP handler serving the MCP endpoint and /health.
+func newStreamableHTTPHandler(hcServer *server.MCPServer, logger *log.Logger, endpointPath string, isStateless bool) http.Handler {
+	// Create StreamableHTTP server which implements the new streamable-http transport
+	// This is the modern MCP transport that supports both direct HTTP responses and SSE streams
+	opts := []server.StreamableHTTPOption{
+		server.WithEndpointPath(endpointPath), // Default MCP endpoint path
+		server.WithStreamableHTTPLogger(newSlogLogger(logger)),
+		server.WithMaxRequestBodyBytes(server.DefaultMaxRequestBodyBytes),
 	}
 
 	// Log the endpoint path being used
@@ -282,50 +331,5 @@ func streamableHTTPServerInit(ctx context.Context, hcServer *server.MCPServer, l
 		w.Write([]byte(response))
 	})
 
-	addr := fmt.Sprintf("%s:%s", host, port)
-	httpServer := &http.Server{
-		Addr:              addr,
-		Handler:           mux,
-		ReadTimeout:       30 * time.Second,
-		ReadHeaderTimeout: 30 * time.Second,
-		WriteTimeout:      30 * time.Second,
-		IdleTimeout:       60 * time.Second,
-	}
-
-	if tlsConfig != nil {
-		httpServer.TLSConfig = tlsConfig.Config
-		logger.Infof("TLS enabled with certificate: %s", tlsConfig.CertFile)
-	} else {
-		if !insecureNoTLS {
-			return fmt.Errorf("TLS is required for the StreamableHTTP server. Set MCP_TLS_CERT_FILE and MCP_TLS_KEY_FILE, or pass --insecure-no-tls to explicitly opt out")
-		}
-		logger.Warnf("TLS is disabled on StreamableHTTP server (--insecure-no-tls). This is not recommended for production")
-	}
-
-	// Start server in goroutine
-	errC := make(chan error, 1)
-	go func() {
-		if tlsConfig != nil {
-			logger.Infof("Starting StreamableHTTP server with TLS on %s%s", addr, endpointPath)
-			errC <- httpServer.ListenAndServeTLS(tlsConfig.CertFile, tlsConfig.KeyFile)
-		} else {
-			logger.Infof("Starting StreamableHTTP server on %s%s", addr, endpointPath)
-			errC <- httpServer.ListenAndServe()
-		}
-	}()
-
-	// Wait for shutdown signal
-	select {
-	case <-ctx.Done():
-		logger.Infof("Shutting down StreamableHTTP server...")
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		return httpServer.Shutdown(shutdownCtx)
-	case err := <-errC:
-		if err != nil && err != http.ErrServerClosed {
-			return fmt.Errorf("StreamableHTTP server error: %w", err)
-		}
-	}
-
-	return nil
+	return mux
 }
