@@ -88,6 +88,7 @@ func TestCORSE2E(t *testing.T) {
 }
 
 // startHTTPContainerWithCORS starts a Docker container with specific CORS settings
+// TODO: HTTP e2e tests (e2e_test.go, cors_e2e_test.go) run only with INSECURE_NO_TLS=true; add a TLS-enabled case.
 func startHTTPContainerWithCORS(t *testing.T, port, mode, origins string) string {
 	portMapping := fmt.Sprintf("%s:8080", port)
 	cmd := exec.Command(
